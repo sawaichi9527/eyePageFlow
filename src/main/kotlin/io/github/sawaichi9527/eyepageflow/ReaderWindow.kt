@@ -476,6 +476,11 @@ private class ReaderPanel(
         editorPane.applyTheme(theme, metrics, settings.fontFamily)
         persistSettings()
         rebuild(anchor)
+        println(
+            "display settings applied: fontSize=${settings.fontSize} " +
+                "lineHeight=${settings.lineHeightFactor} " +
+                "layout=${settings.layoutMode} pages=${pagination.pageCount}",
+        )
         updateStatus()
     }
 
