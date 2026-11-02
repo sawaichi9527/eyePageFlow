@@ -50,6 +50,7 @@ Windows（pwsh7）：
 ```
 
 - 本機 Windows 開發一律用 `pwsh`（opencode-extension-packs 的 pwsh7），不要用內建 `powershell.exe` 5.1。
+- cmd.exe 或其他不執行 `.ps1` 的 shell 請用 `.cmd` 版本：`scripts\gradlew-local.cmd test`、`scripts\bootstrap-jdk.cmd`。直接輸入 `.ps1` 路徑會被檔案關聯開成記事本。
 - Windows 只用 `.local\jdk-21`（Temurin 21）與 `.local\gradle-home`；不需要 `bootstrap-jbr.sh`（那僅供 Linux 原生 Wayland／X11）。
 
 原生 Wayland 啟動（Linux）：

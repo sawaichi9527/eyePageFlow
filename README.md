@@ -102,6 +102,11 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 
 - Windows 不需要 `bootstrap-jbr.sh`；JBR 只用於 Linux 的原生 Wayland／X11。
 - `gradlew-local.ps1` 會設 `JAVA_HOME=.local\jdk-21`、`GRADLE_USER_HOME=.local\gradle-home`，與 Linux 版同樣隔離於專案內。
+- cmd.exe／雙擊情境請改用 `scripts\gradlew-local.cmd`（`.ps1` 在 cmd 會被檔案關聯開成記事本）：
+  ```bat
+  scripts\gradlew-local.cmd test
+  scripts\gradlew-local.cmd run --args="D:\path\to\novel.txt"
+  ```
 
 原生 Wayland：
 
