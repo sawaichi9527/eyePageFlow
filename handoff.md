@@ -6,7 +6,9 @@
 
 已完成規格文件、Gradle 骨架、編碼偵測、字寬表分頁、Java2D 書頁渲染、Swing 原型、10 MiB benchmark、JBR 21 原生 Wayland／XToolkit 啟動，以及文件讀寫與基本開檔／存檔。
 
-顯示設定、空白狀態、雙擊開檔、翻頁動畫與整頁下劃線已完成；編輯模式已接上 RSyntaxTextArea，可切換閱讀／編輯、偵測 dirty、存檔同步、尋找／取代、單頁書本外觀與 undo/redo 100 上限，並有關窗未儲存提示。章節列表支援可切換規則與目前章節標示；顯示設定、章節規則、書籤、最近開啟檔案與書庫會存到 XDG／AppData。檔案列表、書庫管理、老闆鍵（最小化）與單一實例已完成。尚未完成檔案關聯註冊，以及 Ubuntu 24.04 X11／Windows 驗證。
+顯示設定、空白狀態、雙擊開檔、翻頁動畫與整頁下劃線已完成；編輯模式已接上 RSyntaxTextArea，可切換閱讀／編輯、偵測 dirty、存檔同步、尋找／取代、單頁書本外觀與 undo/redo 100 上限，並有關窗未儲存提示。章節列表支援可切換規則與目前章節標示；顯示設定、章節規則、書籤、最近開啟檔案與書庫會存到 XDG／AppData。檔案列表、書庫管理、老闆鍵（最小化）與單一實例已完成。尚未完成檔案關聯註冊、Windows GUI 互動驗證與 Ubuntu 24.04 X11 驗證。
+
+Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 到 `.local/jdk-21`）與 `scripts/gradlew-local.ps1`（`JAVA_HOME`／`GRADLE_USER_HOME` 隔離於 `.local/`），建置、45 個測試、渲染、benchmark、GUI 啟動、托盤與單一實例轉送皆已通過。
 
 ## Completed
 
@@ -17,6 +19,8 @@
 - Gradle 骨架：Kotlin 2.4.10、JVM 21、FlatLaf 3.7.2、JUnit 6。
 - 專案隔離工具鏈：`.local/jdk-21`（Temurin 21.0.12+8）、`.local/jbr-21`、`.local/jbrsdk-21`。
 - `scripts/bootstrap-jbr.sh`：鎖定 JBR 21.0.11 JRE／SDK、SHA-256 驗證、可重複執行。
+- `scripts/bootstrap-jdk.ps1`：Windows 版 Temurin 21.0.12+8 bootstrap（SHA-256 驗證、解壓到 `.local/jdk-21`、版本不符即中止、不動系統 JDK）。
+- `scripts/gradlew-local.ps1`：Windows 版 Gradle Wrapper（`JAVA_HOME=.local\jdk-21`、`GRADLE_USER_HOME=.local\gradle-home`）。
 - `core/TextEncoding.kt`：BOM、UTF-8、UTF-16 LE/BE、Big5、GB18030 偵測與換行偵測。
 - `core/TextDocument.kt`、`core/DocumentIO.kt`：文件模型、開檔、存檔、原編碼／BOM 保留、無法表示字元的 fallback 結果。
 - `core/Pagination.kt`：字寬表分頁、橫排／直排、段落縮排、直排形式標點、拉丁字母旋轉。
@@ -54,7 +58,8 @@
 
 ## In progress
 
-- Ubuntu 24.04 原生 X11 與 Windows 驗證尚未執行。
+- Ubuntu 24.04 原生 X11 驗證尚未執行。
+- Windows GUI 互動驗證（拖放、IME、125%／150% 縮放、檔案對話框、編輯存檔）尚未執行；建置、測試、渲染、benchmark、啟動、托盤與單一實例已完成。
 - 直排標點、禁則、左右對齊仍是原型等級。
 - 尚未做 golden image 基準與字型子集。
 - 目前環境的 GNOME／Wayland 不支援 `SystemTray`，老闆鍵會退回最小化；托盤在有支援的桌面才會安裝。
@@ -64,12 +69,14 @@
 ## Next actions
 
 1. M10：檔案關聯註冊與安裝檔（暫緩，先以 Gradle 驗證）。
-2. 在 Ubuntu 24.04 Xorg 與 Windows 10/11 各跑一次啟動、開檔與編輯存檔驗證。
+2. 在 Ubuntu 24.04 Xorg 跑一次啟動、開檔與編輯存檔驗證；Windows 補 GUI 互動驗證（拖放、IME、縮放、編輯存檔）。
 3. M3：補禁則、左右對齊、offset↔page 完整測試。
 
 ## Validation evidence
 
 執行環境：
+
+Linux（M0 基準）：
 
 - OS：Ubuntu 26.04.1 LTS x86_64
 - Session：Wayland（`XDG_SESSION_TYPE=wayland`）
@@ -80,14 +87,38 @@
 - UART／Console Log：N/A
 - PCAP／packet evidence：N/A
 
-### Session close（2026-11-01 21:34 CST）
+Windows（2026-11-02）：
+
+- OS：Microsoft Windows 10 IoT 企業版 LTSC 21H2 x64（`10.0.19044`）
+- Runtime：Temurin `21.0.12+8`（Eclipse Adoptium）
+- Build runtime：Gradle `9.5.0`、Kotlin `2.4.10`、`JAVA_HOME=.local\jdk-21`、`GRADLE_USER_HOME=.local\gradle-home`
+- Toolkit：`sun.awt.windows.WToolkit`
+- 專案路徑：`D:\workspace\eyePageFlow`（`core.autocrlf=false`，repo 無 `.gitattributes`）
+
+### Linux session close（2026-11-01 21:34 CST）
 
 | 指令 | Exit | Duration | 結果 | 證據 |
 |---|---|---|---|---|
 | `./scripts/gradlew-local.sh test --rerun-tasks` | 0 | 45s | 45 tests, 0 failures, 0 skipped | `/tmp/opencode/session-close-test-rerun.log`、`build/test-results/test/` |
 | `./scripts/gradlew-local.sh check` | 0 | 5s | BUILD SUCCESSFUL | `/tmp/opencode/session-close-check.log` |
 
-### 先前累積驗證
+### Windows session（2026-11-02）
+
+| 指令 | Exit | Duration | 結果 | 證據 |
+|---|---|---|---|---|
+| `.\scripts\bootstrap-jdk.ps1` | 0 | 7m44s | Temurin `21.0.12+8` 安裝到 `.local\jdk-21`，SHA-256 `9ba963ee…21d0` 相符 | `.local\downloads\OpenJDK21U-jdk_x64_windows_hotspot_21.0.12_8.zip` |
+| `.\scripts\gradlew-local.ps1 --version` | 0 | 下載 150 MB | Gradle `9.5.0`、Launcher JVM `21.0.12 (Eclipse Adoptium)`、Daemon JVM `.local\jdk-21` | 終端輸出 |
+| `.\scripts\gradlew-local.ps1 test` | 0 | 2m22s | 45 tests, 0 failures, 0 errors, 0 skipped（19 suites；首次含相依下載） | `build\test-results\test\` |
+| `.\scripts\gradlew-local.ps1 test --rerun-tasks` | 0 | 33s | 45 tests, 0 failures, 0 errors, 0 skipped | `build\test-results\test\` |
+| `.\scripts\gradlew-local.ps1 check` | 0 | 1s | BUILD SUCCESSFUL | 終端輸出 |
+| `.\scripts\gradlew-local.ps1 run --args="--render build/prototype"` | 0 | 3s | 橫排 11 頁、直排 8 頁、3,761 字；另產出 underline 版本；直排頁序、拉丁字母旋轉、標點皆正確（已目視 PNG） | `build\prototype\*.png` |
+| `.\scripts\gradlew-local.ps1 run --args="--benchmark"` | 0 | 3s | 10 MiB、5,934,667 字、解碼 145.8 ms、橫排 168.5 ms／7,768 頁、直排 363.1 ms／6,838 頁 | 終端輸出 |
+| `.\scripts\gradlew-local.ps1 run`（GUI） | 執行中 | — | `toolkit=sun.awt.windows.WToolkit`、`tray: installed` | `%TEMP%\opencode\gui-run.log` |
+| 第二個實例開 Big5 檔 | 0 | 3s | secondary 立即結束；primary log 出現 `opened ... encoding=Big5 chars=94 pages=1` | `%TEMP%\opencode\gui-run.log` |
+
+Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146 bytes，Big5／CP950、CRLF）。
+
+### Linux 先前累積驗證
 
 | 指令 | Exit | 結果 | 證據 |
 |---|---|---|---|
@@ -126,14 +157,17 @@ JBR 下載與 checksum：
 
 - Ubuntu 24.04 原生 X11（需 Xorg session）。
 - Ubuntu 24.04 Wayland。
-- Windows 10／11。
-- IME、125%／150% 縮放、托盤、拖放、檔案對話框、剪貼簿。
+- Windows 10／11 其他版本（本次為 Windows 10 IoT 企業版 LTSC 21H2／19044）。
+- Windows GUI 互動：拖放、IME、125%／150% 縮放、檔案對話框、剪貼簿、編輯存檔。
 - 直排標點與字型 fallback 的 golden image。
 - 10 MiB 以上的檔案與 20 MiB 上限。
 - 編輯器 10 MiB 的輸入延遲（M7）。
 
 ## Known issues
 
+- Windows 未安裝 Noto Serif CJK TC，會 fallback 到系統 CJK 字型；橫排頁數因此與 Linux 不同（7,768 vs 7,889），直排相同（6,838）。尚未決定是否隨專案附字型。
+- `pwsh -File <script> --args="C:\path"` 會把磁碟機代號的 `:` 當成參數分隔而拆成兩個引數；請直接用 `.\scripts\gradlew-local.ps1 run --args="C:\path"`，或改用 `pwsh -Command "& '.\scripts\gradlew-local.ps1' run '--args=C:\path'"`。
+- repo 沒有 `.gitattributes`，clone 後需自行 `git config core.autocrlf false`，否則 `gradlew` 與 `*.sh` 可能被轉成 CRLF。
 - 直排標點目前使用 Unicode 直排形式；部分字型不支援時會 fallback，尚未量測。
 - 禁則（行首／行尾標點）與左右對齊未實作。
 - 直排縮排以「欄頂跳 2 格」近似；遇到新頁或空白行仍需更多測試。
@@ -150,4 +184,4 @@ JBR 下載與 checksum：
 
 ## M0 判定
 
-**Go。** 分頁速度、直排／橫排渲染、JBR 原生 Wayland、app-image 啟動都已在目前環境驗證。最大風險仍是直排標點與禁則的精確度，以及尚未驗證的 X11／Windows 平台；這些列入 M1／M3 的必檢項目。
+**Go。** 分頁速度、直排／橫排渲染、JBR 原生 Wayland、app-image 啟動都已在目前環境驗證。Windows 端已補上建置、測試、渲染、benchmark、GUI 啟動與單一實例；最大風險仍是直排標點與禁則的精確度，以及尚未驗證的 Ubuntu 24.04 X11 與 Windows GUI 互動（拖放／IME／縮放／編輯存檔），列入 M1／M3 的必檢項目。

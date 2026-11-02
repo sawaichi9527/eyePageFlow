@@ -6,7 +6,7 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 
 ## 目前狀態
 
-**M0 技術驗證完成；M1 進行中（檔案層與主視窗殼已完成第一步）。Ubuntu 26.04 原生 Wayland 已驗證；24.04 X11 與 Windows 待驗證。**
+**M0 技術驗證完成；M1 進行中（檔案層與主視窗殼已完成第一步）。Ubuntu 26.04 原生 Wayland 已驗證；Windows 建置／測試／渲染／benchmark／啟動／單一實例已驗證（GUI 互動與 24.04 X11 待驗證）。**
 
 已完成：
 
@@ -21,7 +21,7 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 
 已完成：開檔／存檔、原編碼／BOM 保留、無法表示字元的 UTF-8／UTF-16LE fallback、命令列開檔、拖放開檔、空白狀態（logo＋雙擊開檔）、顯示設定（表單、字體家族、顏色、內置圖案、配色方案、中縫、即時預覽）、整頁下劃線、翻頁動畫、基本編輯模式（RSyntaxTextArea、dirty、閱讀／編輯切換、尋找／取代、單頁書本外觀、undo/redo 100）、章節列表（可切換規則、目前章節標示）、書籤管理、最近開啟檔案、書庫／檔案列表、老闆鍵（無托盤時最小化）、單一實例（第二次啟動把檔案送到既有視窗）、關窗提示、設定持久化（XDG／AppData）。
 
-尚未完成：檔案關聯註冊、Windows 與 Ubuntu 24.04 X11 驗證。
+尚未完成：檔案關聯註冊、Windows GUI 互動驗證（拖放／IME／縮放）與 Ubuntu 24.04 X11 驗證。
 
 ## 平台
 
@@ -46,6 +46,8 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 - 專案隔離工具鏈：JDK 與 Gradle cache 放在 `.local/`，不修改系統環境
 
 ## 快速開始
+
+### Linux
 
 ```bash
 # 第一次：若 .local/jdk-21 不存在
@@ -74,6 +76,33 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 ./scripts/gradlew-local.sh run --args="--benchmark"
 ```
 
+### Windows
+
+```powershell
+# 第一次：下載 Temurin 21.0.12+8 到 .local\jdk-21（SHA-256 驗證、不動系統 JDK）
+.\scripts\bootstrap-jdk.ps1
+
+# 測試
+.\scripts\gradlew-local.ps1 test
+
+# Swing 原型
+.\scripts\gradlew-local.ps1 run
+
+# 直接開啟檔案／編輯模式／顯示設定
+.\scripts\gradlew-local.ps1 run --args="D:\path\to\novel.txt"
+.\scripts\gradlew-local.ps1 run --args="--editor"
+.\scripts\gradlew-local.ps1 run --args="--settings"
+
+# 產生直排／橫排 PNG
+.\scripts\gradlew-local.ps1 run --args="--render build/prototype"
+
+# 10 MiB Big5 分頁 benchmark
+.\scripts\gradlew-local.ps1 run --args="--benchmark"
+```
+
+- Windows 不需要 `bootstrap-jbr.sh`；JBR 只用於 Linux 的原生 Wayland／X11。
+- `gradlew-local.ps1` 會設 `JAVA_HOME=.local\jdk-21`、`GRADLE_USER_HOME=.local\gradle-home`，與 Linux 版同樣隔離於專案內。
+
 原生 Wayland：
 
 ```bash
@@ -85,15 +114,26 @@ JAVA_HOME="$PWD/.local/jbr-21" \
 
 原型快捷鍵：`V` 直排／橫排、`D` 單頁／雙頁、`T` 主題、`B` 低調模式、方向鍵／PgUp／PgDn 翻頁。
 
-## M0 驗證數據
+## 驗證數據
 
-- 環境：Ubuntu 26.04.1 LTS x86_64、Wayland、JBR 21.0.11
+Linux（Ubuntu 26.04.1 LTS x86_64、Wayland、JBR 21.0.11）：
+
 - Benchmark：10 MiB Big5、5,934,667 字、解碼 177.2 ms
   - 橫排：7,889 頁、191.4 ms
   - 直排：6,838 頁、342.9 ms
 - 原生 Wayland：`toolkit=sun.awt.wl.WLToolkit`
 - XWayland 路徑：`toolkit=sun.awt.X11.XToolkit`
 - 測試：`./scripts/gradlew-local.sh test` 通過（45 tests，0 failures）
+
+Windows（Windows 10 x64、Temurin 21.0.12+8、Gradle 9.5.0）：
+
+- Benchmark：10 MiB Big5、5,934,667 字、解碼 145.8 ms
+  - 橫排：7,768 頁、168.5 ms
+  - 直排：6,838 頁、363.1 ms
+- 啟動：`toolkit=sun.awt.windows.WToolkit`、`tray: installed`
+- 開檔（單一實例轉送）：`encoding=Big5 chars=94 pages=1`
+- 測試：`.\scripts\gradlew-local.ps1 test` 通過（45 tests，0 failures）
+- 頁數與 Linux 差異（7,768 vs 7,889）來自字型 fallback 的字寬不同；尚無 Noto Serif CJK TC。
 
 ## 文件
 

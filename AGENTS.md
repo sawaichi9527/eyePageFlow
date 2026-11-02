@@ -39,6 +39,19 @@ eyePageFlow 是「PageByPage: An application to view & edit plain text file.」�
 ./scripts/gradlew-local.sh run --args="--benchmark"
 ```
 
+Windows（pwsh7）：
+
+```powershell
+.\scripts\bootstrap-jdk.ps1
+.\scripts\gradlew-local.ps1 test
+.\scripts\gradlew-local.ps1 check
+.\scripts\gradlew-local.ps1 run --args="--render build/prototype"
+.\scripts\gradlew-local.ps1 run --args="--benchmark"
+```
+
+- 本機 Windows 開發一律用 `pwsh`（opencode-extension-packs 的 pwsh7），不要用內建 `powershell.exe` 5.1。
+- Windows 只用 `.local\jdk-21`（Temurin 21）與 `.local\gradle-home`；不需要 `bootstrap-jbr.sh`（那僅供 Linux 原生 Wayland／X11）。
+
 原生 Wayland 啟動（Linux）：
 
 ```bash
