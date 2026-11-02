@@ -188,12 +188,12 @@ private class ReaderPanel(
     private val storedSettings = settingsStore.load()
     private var settings = storedSettings.display
     private var metrics = settings.toPageMetrics()
-    private var font = Typeface.pageFont(metrics, settings.fontFamily)
+    private var pageFont = Typeface.pageFont(metrics, settings.fontFamily)
     private var mode = WritingMode.VERTICAL
     private var theme = Theme.fromSettings(settings)
     private var doublePage = settings.usesDoublePage()
     private var showBookAndDesktop = settings.showBookAndDesktop
-    private var engine = PaginationEngine(text, metrics, mode, font)
+    private var engine = PaginationEngine(text, metrics, mode, pageFont)
     private var pagination: Pagination = engine.paginate()
     private var spreadStart = 0
     private var chapterRule: ChapterRule = storedSettings.chapterRule
@@ -226,6 +226,11 @@ private class ReaderPanel(
         editorPane.bindEscape { bossKey() }
         buildToolbar()
         installKeyBindings()
+        println(
+            "startup typography: fontSize=${metrics.fontSize} " +
+                "font=${pageFont.name}/${pageFont.size} " +
+                "pageWidth=${metrics.pageWidth} pageHeight=${metrics.pageHeight}",
+        )
         rebuildRecentMenu()
         if (initialPath != null) {
             openPath(initialPath)
@@ -401,7 +406,7 @@ private class ReaderPanel(
     private fun rebuild(anchor: Int?) {
         canvas.cancelAnimation()
         val anchorOffset = anchor ?: currentAnchor()
-        engine = PaginationEngine(text, metrics, mode, font)
+        engine = PaginationEngine(text, metrics, mode, pageFont)
         pagination = engine.paginate()
         spreadStart = if (anchor == null) {
             0
@@ -469,7 +474,7 @@ private class ReaderPanel(
     private fun applySettings(newSettings: DisplaySettings, anchor: Int?) {
         settings = newSettings
         metrics = settings.toPageMetrics()
-        font = Typeface.pageFont(metrics, settings.fontFamily)
+        pageFont = Typeface.pageFont(metrics, settings.fontFamily)
         theme = Theme.fromSettings(settings)
         doublePage = settings.usesDoublePage()
         showBookAndDesktop = settings.showBookAndDesktop
@@ -1072,7 +1077,7 @@ private class ReaderPanel(
                     theme = theme,
                     doublePage = doublePage,
                     showBookAndDesktop = showBookAndDesktop,
-                    font = font,
+                    font = pageFont,
                 )
             }
         }

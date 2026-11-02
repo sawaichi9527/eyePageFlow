@@ -27,6 +27,9 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - 直排半角字（拉丁字母、數字）改為依字寬前進，旋倒字串不再被撐成 1em／字。
 - `Typeface` 增加 CJK 優先的 fallback 鏈（Noto Serif CJK TC → Noto Serif TC → 新細明體 → …），避免落到拉丁字型。
 - `SettingsStore` 增加 `display.typographyVersion`，舊設定檔的字號／行距自動升級到新基準，其餘設定保留。
+- 修正主畫面字級不生效：`BookCanvas` 內的 `font` 被解析成 `JPanel.font`（元件預設字型，約 9px），
+  導致書頁用預設字型繪製、卻按設定字級排版（分頁正確、看起來卻「字很小、間距很大」）。
+  外層欄位改名 `pageFont`，並在啟動時記錄 `startup typography` 供診斷。
 - `core/TextEncoding.kt`：BOM、UTF-8、UTF-16 LE/BE、Big5、GB18030 偵測與換行偵測。
 - `core/TextDocument.kt`、`core/DocumentIO.kt`：文件模型、開檔、存檔、原編碼／BOM 保留、無法表示字元的 fallback 結果。
 - `core/Pagination.kt`：字寬表分頁、橫排／直排、段落縮排、直排形式標點、拉丁字母旋轉。
