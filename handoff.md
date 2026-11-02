@@ -21,6 +21,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - `scripts/bootstrap-jbr.sh`：鎖定 JBR 21.0.11 JRE／SDK、SHA-256 驗證、可重複執行。
 - `scripts/bootstrap-jdk.ps1`：Windows 版 Temurin 21.0.12+8 bootstrap（SHA-256 驗證、解壓到 `.local/jdk-21`、版本不符即中止、不動系統 JDK）。
 - `scripts/gradlew-local.ps1`：Windows 版 Gradle Wrapper（`JAVA_HOME=.local\jdk-21`、`GRADLE_USER_HOME=.local\gradle-home`）。
+- `.gitattributes`：文字檔 LF、`*.bat`／`*.cmd` CRLF、二進位標記，避免 Windows 的 `core.autocrlf=true` 讓整批檔案顯示為已修改。
 - `core/TextEncoding.kt`：BOM、UTF-8、UTF-16 LE/BE、Big5、GB18030 偵測與換行偵測。
 - `core/TextDocument.kt`、`core/DocumentIO.kt`：文件模型、開檔、存檔、原編碼／BOM 保留、無法表示字元的 fallback 結果。
 - `core/Pagination.kt`：字寬表分頁、橫排／直排、段落縮排、直排形式標點、拉丁字母旋轉。
@@ -167,7 +168,7 @@ JBR 下載與 checksum：
 
 - Windows 未安裝 Noto Serif CJK TC，會 fallback 到系統 CJK 字型；橫排頁數因此與 Linux 不同（7,768 vs 7,889），直排相同（6,838）。尚未決定是否隨專案附字型。
 - `pwsh -File <script> --args="C:\path"` 會把磁碟機代號的 `:` 當成參數分隔而拆成兩個引數；請直接用 `.\scripts\gradlew-local.ps1 run --args="C:\path"`，或改用 `pwsh -Command "& '.\scripts\gradlew-local.ps1' run '--args=C:\path'"`。
-- repo 沒有 `.gitattributes`，clone 後需自行 `git config core.autocrlf false`，否則 `gradlew` 與 `*.sh` 可能被轉成 CRLF。
+- 行尾由 `.gitattributes` 統一（文字檔 LF、`*.bat`／`*.cmd` CRLF）。既有 clone 若仍顯示整批 modified，執行 `git add --renormalize .` 或重新 clone。
 - 直排標點目前使用 Unicode 直排形式；部分字型不支援時會 fallback，尚未量測。
 - 禁則（行首／行尾標點）與左右對齊未實作。
 - 直排縮排以「欄頂跳 2 格」近似；遇到新頁或空白行仍需更多測試。
