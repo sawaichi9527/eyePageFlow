@@ -22,6 +22,10 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - `scripts/bootstrap-jdk.ps1`：Windows 版 Temurin 21.0.12+8 bootstrap（SHA-256 驗證、解壓到 `.local/jdk-21`、版本不符即中止、不動系統 JDK）。
 - `scripts/gradlew-local.ps1`：Windows 版 Gradle Wrapper（`JAVA_HOME=.local\jdk-21`、`GRADLE_USER_HOME=.local\gradle-home`）。
 - `.gitattributes`：文字檔 LF、`*.bat`／`*.cmd` CRLF、二進位標記，避免 Windows 的 `core.autocrlf=true` 讓整批檔案顯示為已修改。
+- 排版對齊原作 PageByPage：頁 900×920、內容區 812×856、字號 26、行距 1.44、直排欄距 1.5；依原作截圖實測（頁 909×919、內容 825×872、字距 26 px、欄距／行距 39 px）。
+- 直排半角字（拉丁字母、數字）改為依字寬前進，旋倒字串不再被撐成 1em／字。
+- `Typeface` 增加 CJK 優先的 fallback 鏈（Noto Serif CJK TC → Noto Serif TC → 新細明體 → …），避免落到拉丁字型。
+- `SettingsStore` 增加 `display.typographyVersion`，舊設定檔的字號／行距自動升級到新基準，其餘設定保留。
 - `core/TextEncoding.kt`：BOM、UTF-8、UTF-16 LE/BE、Big5、GB18030 偵測與換行偵測。
 - `core/TextDocument.kt`、`core/DocumentIO.kt`：文件模型、開檔、存檔、原編碼／BOM 保留、無法表示字元的 fallback 結果。
 - `core/Pagination.kt`：字寬表分頁、橫排／直排、段落縮排、直排形式標點、拉丁字母旋轉。
@@ -110,10 +114,10 @@ Windows（2026-11-02）：
 | `.\scripts\bootstrap-jdk.ps1` | 0 | 7m44s | Temurin `21.0.12+8` 安裝到 `.local\jdk-21`，SHA-256 `9ba963ee…21d0` 相符 | `.local\downloads\OpenJDK21U-jdk_x64_windows_hotspot_21.0.12_8.zip` |
 | `.\scripts\gradlew-local.ps1 --version` | 0 | 下載 150 MB | Gradle `9.5.0`、Launcher JVM `21.0.12 (Eclipse Adoptium)`、Daemon JVM `.local\jdk-21` | 終端輸出 |
 | `.\scripts\gradlew-local.ps1 test` | 0 | 2m22s | 45 tests, 0 failures, 0 errors, 0 skipped（19 suites；首次含相依下載） | `build\test-results\test\` |
-| `.\scripts\gradlew-local.ps1 test --rerun-tasks` | 0 | 33s | 45 tests, 0 failures, 0 errors, 0 skipped | `build\test-results\test\` |
+| `.\scripts\gradlew-local.ps1 test --rerun-tasks` | 0 | 33s | 49 tests, 0 failures, 0 errors, 0 skipped | `build\test-results\test\` |
 | `.\scripts\gradlew-local.ps1 check` | 0 | 1s | BUILD SUCCESSFUL | 終端輸出 |
-| `.\scripts\gradlew-local.ps1 run --args="--render build/prototype"` | 0 | 3s | 橫排 11 頁、直排 8 頁、3,761 字；另產出 underline 版本；直排頁序、拉丁字母旋轉、標點皆正確（已目視 PNG） | `build\prototype\*.png` |
-| `.\scripts\gradlew-local.ps1 run --args="--benchmark"` | 0 | 3s | 10 MiB、5,934,667 字、解碼 145.8 ms、橫排 168.5 ms／7,768 頁、直排 363.1 ms／6,838 頁 | 終端輸出 |
+| `.\scripts\gradlew-local.ps1 run --args="--render build/prototype"` | 0 | 4s | 橫排 10 頁、直排 11 頁、3,761 字；另產出 underline 版本 | `build\prototype\*.png` |
+| `.\scripts\gradlew-local.ps1 run --args="--benchmark"` | 0 | 10s | 10 MiB、5,934,667 字、解碼 125.5 ms、橫排 228.3 ms／7,531 頁、直排 270.6 ms／8,091 頁 | 終端輸出 |
 | `.\scripts\gradlew-local.ps1 run`（GUI） | 執行中 | — | `toolkit=sun.awt.windows.WToolkit`、`tray: installed` | `%TEMP%\opencode\gui-run.log` |
 | 第二個實例開 Big5 檔 | 0 | 3s | secondary 立即結束；primary log 出現 `opened ... encoding=Big5 chars=94 pages=1` | `%TEMP%\opencode\gui-run.log` |
 
@@ -166,7 +170,8 @@ JBR 下載與 checksum：
 
 ## Known issues
 
-- Windows 未安裝 Noto Serif CJK TC，會 fallback 到系統 CJK 字型；橫排頁數因此與 Linux 不同（7,768 vs 7,889），直排相同（6,838）。尚未決定是否隨專案附字型。
+- Windows 未安裝 Noto Serif CJK TC，`Typeface` 會依序退回 Noto Serif TC／新細明體／Noto Sans TC；Windows 與 Linux 的字型不同，頁數也會不同。
+- 直排半角字目前用字寬前進，未做整體字串的字距微調；旋倒字串在窄欄位仍可能與相鄰欄輕微重疊。
 - `pwsh -File <script> --args="C:\path"` 會把磁碟機代號的 `:` 當成參數分隔而拆成兩個引數；請直接用 `.\scripts\gradlew-local.ps1 run --args="C:\path"`，或改用 `pwsh -Command "& '.\scripts\gradlew-local.ps1' run '--args=C:\path'"`。
 - 行尾由 `.gitattributes` 統一（文字檔 LF、`*.bat`／`*.cmd` CRLF）。既有 clone 若仍顯示整批 modified，執行 `git add --renormalize .` 或重新 clone。
 - 直排標點目前使用 Unicode 直排形式；部分字型不支援時會 fallback，尚未量測。

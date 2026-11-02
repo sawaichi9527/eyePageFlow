@@ -53,4 +53,28 @@ class PaginationTest {
             assertTrue(glyph.y.isFinite())
         }
     }
+
+    @Test
+    fun `vertical cjk keeps one em advance`() {
+        val glyphs = verticalGlyphs("檔檔")
+        assertEquals(metrics.fontSize, glyphs[1].y - glyphs[0].y, 0.01f)
+    }
+
+    @Test
+    fun `vertical latin advances by glyph width`() {
+        val glyphs = verticalGlyphs("ee")
+        val advance = glyphs[1].y - glyphs[0].y
+        assertTrue(advance > 0f)
+        assertTrue(
+            advance < metrics.fontSize,
+            "latin advance $advance should be narrower than one em ${metrics.fontSize}",
+        )
+        assertEquals(advance, glyphs[0].cellHeight, 0.01f)
+    }
+
+    private fun verticalGlyphs(source: String): List<PlacedGlyph> {
+        val engine = PaginationEngine(source, metrics, WritingMode.VERTICAL, font)
+        val pagination = engine.paginate()
+        return engine.compose(pagination.page(0)).glyphs
+    }
 }

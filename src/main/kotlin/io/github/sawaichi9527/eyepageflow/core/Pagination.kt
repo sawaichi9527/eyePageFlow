@@ -14,14 +14,14 @@ enum class WritingMode {
 
 data class PageMetrics(
     val pageWidth: Int = 900,
-    val pageHeight: Int = 850,
-    val marginTop: Int = 42,
-    val marginBottom: Int = 58,
+    val pageHeight: Int = 920,
+    val marginTop: Int = 32,
+    val marginBottom: Int = 32,
     val marginLeft: Int = 44,
     val marginRight: Int = 44,
-    val fontSize: Float = 24f,
-    val lineHeightFactor: Float = 1.5f,
-    val verticalColumnFactor: Float = 1.2f,
+    val fontSize: Float = 26f,
+    val lineHeightFactor: Float = 1.44f,
+    val verticalColumnFactor: Float = 1.5f,
     val paragraphIndentEm: Float = 2f,
     val bold: Boolean = false,
     val underline: Boolean = false,
@@ -202,12 +202,13 @@ class PaginationEngine(
         val columnPitch = metrics.fontSize * metrics.verticalColumnFactor
         val maxColumns = floor(metrics.contentWidth / columnPitch).toInt().coerceAtLeast(1)
         val rows = floor(metrics.contentHeight / cellHeight).toInt().coerceAtLeast(1)
+        val columnHeight = rows * cellHeight
         val glyphs: MutableList<PlacedGlyph>? = if (collect) ArrayList() else null
         var index = start
         var column = 0
-        var row = 0
+        var cursor = 0f
         var indentNextColumn = start > 0 && text[start - 1] == '\n'
-        val indentRows = metrics.paragraphIndentEm.toInt().coerceAtLeast(0)
+        val indent = metrics.paragraphIndentEm * cellHeight
         val right = metrics.marginLeft + metrics.contentWidth
 
         while (index < limitEnd && column < maxColumns) {
@@ -215,42 +216,59 @@ class PaginationEngine(
             if (c == '\r' || c == '\n') {
                 index += if (c == '\r' && index + 1 < limitEnd && text[index + 1] == '\n') 2 else 1
                 column += 1
-                row = 0
+                cursor = 0f
                 indentNextColumn = true
                 continue
             }
 
-            if (row == 0 && indentNextColumn) {
-                row = indentRows.coerceAtMost(rows - 1)
+            if (cursor == 0f && indentNextColumn) {
+                cursor = indent.coerceAtMost((columnHeight - cellHeight).coerceAtLeast(0f))
                 indentNextColumn = false
+            }
+
+            val style = verticalStyle(c)
+            val advance = verticalAdvance(c)
+            if (cursor > 0f && cursor + advance > columnHeight) {
+                column += 1
+                cursor = 0f
+                indentNextColumn = false
+                continue
             }
 
             val x = right - (column + 1) * columnPitch +
                 (columnPitch - metrics.fontSize) / 2f
-            val y = metrics.marginTop + row * cellHeight
-            val style = verticalStyle(c)
+            val y = metrics.marginTop + cursor
             glyphs?.add(
                 PlacedGlyph(
                     char = c,
                     x = x + style.xOffset,
                     y = y + style.yOffset,
                     cellWidth = metrics.fontSize,
-                    cellHeight = cellHeight,
+                    cellHeight = advance,
                     rotationDegrees = style.rotationDegrees,
                     underline = metrics.underline,
                     drawChar = style.drawChar ?: c,
                 ),
             )
             index += 1
-            row += 1
-            if (row >= rows) {
-                column += 1
-                row = 0
-                indentNextColumn = false
-            }
+            cursor += advance
         }
 
         return WalkResult(index, glyphs ?: emptyList(), 0, column)
+    }
+
+    /**
+     * 直排的前進量：全角字（CJK、全角標點）固定 1em；
+     * 半角字（拉丁字母、數字、半角標點）依字寬前進，避免旋倒的
+     * 拉丁字串每個字母都被撐成一個全角格子。
+     */
+    private fun verticalAdvance(c: Char): Float {
+        val width = charWidth(c)
+        return if (width >= metrics.fontSize * 0.9f) {
+            metrics.fontSize
+        } else {
+            width.coerceAtLeast(metrics.fontSize * 0.3f)
+        }
     }
 
     private fun charWidth(c: Char): Float = widthCache.getOrPut(c) {

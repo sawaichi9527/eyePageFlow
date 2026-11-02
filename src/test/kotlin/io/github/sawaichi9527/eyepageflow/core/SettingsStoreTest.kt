@@ -63,4 +63,27 @@ class SettingsStoreTest {
         val loaded = SettingsStore(file).load()
         assertEquals(ChapterRuleCatalog.DEFAULT.id, loaded.chapterRule.id)
     }
+
+    @Test
+    fun `legacy typography settings are upgraded to the new baseline`() {
+        val file = tempDir.resolve("legacy.properties")
+        Files.writeString(
+            file,
+            "display.fontSize=24.0\ndisplay.lineHeight=1.5\ndisplay.theme=modern\n",
+        )
+        val loaded = SettingsStore(file).load()
+        assertEquals(DisplaySettings().fontSize, loaded.display.fontSize)
+        assertEquals(DisplaySettings().lineHeightFactor, loaded.display.lineHeightFactor)
+        assertEquals("modern", loaded.display.themeId)
+    }
+
+    @Test
+    fun `saved typography survives a reload`() {
+        val file = tempDir.resolve("typography.properties")
+        val store = SettingsStore(file)
+        store.saveDisplaySettings(DisplaySettings(fontSize = 32f, lineHeightFactor = 1.7f))
+        val loaded = store.load()
+        assertEquals(32f, loaded.display.fontSize)
+        assertEquals(1.7f, loaded.display.lineHeightFactor)
+    }
 }

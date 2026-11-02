@@ -24,6 +24,10 @@ class SettingsStore(private val file: Path) {
             return AppSettings(defaultDisplay, defaultRule)
         }
 
+        // 舊版設定檔的字號與行距是舊基準；升版後改回新預設，其餘設定保留。
+        val typographyVersion = int(properties.getProperty(KEY_TYPOGRAPHY_VERSION), 1)
+        val typographyIsCurrent = typographyVersion >= CURRENT_TYPOGRAPHY_VERSION
+
         val display = defaultDisplay.copy(
             themeId = properties.getProperty(KEY_THEME, defaultDisplay.themeId),
             layoutMode = enumValue(
@@ -36,11 +40,16 @@ class SettingsStore(private val file: Path) {
             ),
             pageWidth = int(properties.getProperty(KEY_PAGE_WIDTH), defaultDisplay.pageWidth),
             fontFamily = properties.getProperty(KEY_FONT_FAMILY, defaultDisplay.fontFamily),
-            fontSize = float(properties.getProperty(KEY_FONT_SIZE), defaultDisplay.fontSize),
-            lineHeightFactor = float(
-                properties.getProperty(KEY_LINE_HEIGHT),
-                defaultDisplay.lineHeightFactor,
-            ),
+            fontSize = if (typographyIsCurrent) {
+                float(properties.getProperty(KEY_FONT_SIZE), defaultDisplay.fontSize)
+            } else {
+                defaultDisplay.fontSize
+            },
+            lineHeightFactor = if (typographyIsCurrent) {
+                float(properties.getProperty(KEY_LINE_HEIGHT), defaultDisplay.lineHeightFactor)
+            } else {
+                defaultDisplay.lineHeightFactor
+            },
             paragraphIndentEm = float(
                 properties.getProperty(KEY_INDENT),
                 defaultDisplay.paragraphIndentEm,
@@ -122,6 +131,7 @@ class SettingsStore(private val file: Path) {
         properties[KEY_TEXT_COLOR] = display.textColor.toString(16)
         properties[KEY_GUTTER_COLOR] = display.gutterColor.toString(16)
         properties[KEY_CHAPTER_PATTERN] = settings.chapterRule.pattern.pattern
+        properties[KEY_TYPOGRAPHY_VERSION] = CURRENT_TYPOGRAPHY_VERSION.toString()
 
         file.parent?.let { Files.createDirectories(it) }
         Files.newOutputStream(file).use { properties.store(it, "eyePageFlow settings") }
@@ -164,5 +174,7 @@ class SettingsStore(private val file: Path) {
         const val KEY_TEXT_COLOR = "display.textColor"
         const val KEY_GUTTER_COLOR = "display.gutterColor"
         const val KEY_CHAPTER_PATTERN = "chapter.pattern"
+        const val KEY_TYPOGRAPHY_VERSION = "display.typographyVersion"
+        const val CURRENT_TYPOGRAPHY_VERSION = 2
     }
 }

@@ -127,13 +127,15 @@ Linux（Ubuntu 26.04.1 LTS x86_64、Wayland、JBR 21.0.11）：
 
 Windows（Windows 10 x64、Temurin 21.0.12+8、Gradle 9.5.0）：
 
-- Benchmark：10 MiB Big5、5,934,667 字、解碼 145.8 ms
-  - 橫排：7,768 頁、168.5 ms
-  - 直排：6,838 頁、363.1 ms
+- Benchmark：10 MiB Big5、5,934,667 字、解碼 125.5 ms
+  - 橫排：7,531 頁、228.3 ms
+  - 直排：8,091 頁、270.6 ms
 - 啟動：`toolkit=sun.awt.windows.WToolkit`、`tray: installed`
 - 開檔（單一實例轉送）：`encoding=Big5 chars=94 pages=1`
-- 測試：`.\scripts\gradlew-local.ps1 test` 通過（45 tests，0 failures）
-- 頁數與 Linux 差異（7,768 vs 7,889）來自字型 fallback 的字寬不同；尚無 Noto Serif CJK TC。
+- 測試：`.\scripts\gradlew-local.ps1 test` 通過（49 tests，0 failures）
+- 排版參數已對齊原作 PageByPage 的實測值：頁 900×920、內容 812×856、字號 26、
+  直排欄距 1.5 em、行距 1.44 em（原作頁 909×919、內容 825×872、字距 26 px、欄距／行距 39 px）。
+- 頁數與 Linux 差異來自字型 fallback（Windows 為新細明體）；Noto Serif CJK TC 未安裝。
 
 ## 文件
 
