@@ -285,8 +285,8 @@ class PaginationEngine(
             return VerticalStyle(drawChar = verticalForm)
         }
         return when (c) {
-            '。', '、', '，', '．', '：', '；' ->
-                VerticalStyle(xOffset = metrics.fontSize * 0.58f, yOffset = -metrics.fontSize * 0.62f)
+            // 直排形式不可用時，CJK 標點（。、，：；）直接沿用原字形：
+            // 這些字的墨水在字格內本來就置中，加位移反而會壓到欄線。
             '「', '」', '『', '』', '（', '）', '《', '》', '〈', '〉' ->
                 VerticalStyle(rotationDegrees = 90f)
             '…', '—', '～' ->

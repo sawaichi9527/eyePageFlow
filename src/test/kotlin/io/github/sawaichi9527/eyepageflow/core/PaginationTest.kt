@@ -72,6 +72,15 @@ class PaginationTest {
         assertEquals(advance, glyphs[0].cellHeight, 0.01f)
     }
 
+    @Test
+    fun `vertical cjk punctuation keeps its cell origin`() {
+        val glyphs = verticalGlyphs("檔，檔")
+        val first = glyphs[0]
+        val comma = glyphs[1]
+        assertEquals(first.x, comma.x, 0.01f)
+        assertEquals(first.y + metrics.fontSize, comma.y, 0.01f)
+    }
+
     private fun verticalGlyphs(source: String): List<PlacedGlyph> {
         val engine = PaginationEngine(source, metrics, WritingMode.VERTICAL, font)
         val pagination = engine.paginate()
