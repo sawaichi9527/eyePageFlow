@@ -1,0 +1,14 @@
+# 行尾統一：repo 內文字檔一律 LF，Windows 批次檔用 CRLF。
+# 避免 Windows 上 core.autocrlf=true 造成整批檔案顯示為已修改。
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=lf
+
+# 二進位
+*.jar binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.zip binary
+*.gz binary
