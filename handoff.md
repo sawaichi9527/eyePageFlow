@@ -274,6 +274,32 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 
 同時確認 headless 路徑不受影響：`run --args="--benchmark"`（解碼 157.2 ms、橫排 314.8 ms／7,779 頁、直排 478.4 ms／8,420 頁）與 JBR 下 `--render` 四張 PNG 都正常。
 
+### Session close（2026-11-04 00:19 CST）
+
+環境：Ubuntu 26.04.1 LTS x86_64、Wayland session、Temurin `21.0.12+8`（建置／測試）、JBR `21.0.11`（GUI 驗證）、Gradle 9.5.0。
+本次工作區在開始收尾時已 commit 並 push，`git status` 乾淨（`main...origin/main`）。
+
+| 指令 | Exit | Duration | 結果 | 證據 |
+|---|---|---|---|---|
+| `./scripts/gradlew-local.sh test --rerun-tasks` | 0 | 11s | **111 tests、26 suites、0 failures、0 errors、0 skipped** | `/tmp/opencode/close-test.log`、`build/test-results/test/` |
+| `./scripts/gradlew-local.sh check` | 0 | 2s | BUILD SUCCESSFUL | `/tmp/opencode/close-check.log` |
+| `./scripts/gradlew-local.sh run --args="--benchmark"` | 0 | — | 解碼 139.9 ms、橫排 372.6 ms／7,724 頁、直排 641.2 ms／8,375 頁 | `/tmp/opencode/close-benchmark.log` |
+| `./scripts/gradlew-local.sh run --args="--render /tmp/opencode/close-render"` | 0 | — | 4 張 PNG 產生（橫排／直排 × 一般／下劃線） | `/tmp/opencode/close-render.log`、`/tmp/opencode/close-render/*.png` |
+
+本次 Session 的提交：
+
+- `d89cd88` perf: cache procedural textures
+- `cd10770` feat: finish M3 typography
+- `def0616` feat: embed Noto Serif CJK TC and finish layout/vertical typography
+- `a5b2ff9` feat: replace the slide-only page turn with a real page curl
+
+尚未驗證（本次 Session 未執行）：
+
+- Windows 的建置、測試、GUI 互動與 MSI 打包（明天遷移到 Windows 環境處理）。
+- AppImage 在非沙箱桌面環境的實際執行（此環境會自刪，見 Known issues）。
+- Ubuntu 24.04 原生 X11（已延後至 P3）。
+- 拖放、IME、縮放、剪貼簿、編輯存檔、關窗提示等需要真人操作的項目。
+
 ### 內嵌字型與捲頁（2026-11-04）
 
 - 內嵌 `NotoSerifCJKtc-Regular.otf`（24 MB，SHA-256 見 `THIRD_PARTY_NOTICES.md`）：啟動 log 顯示 `page font: Noto Serif CJK TC (embedded=true)`；`eyePageFlow-0.1.0.jar` 由約 1 MB 增至 20 MB。
