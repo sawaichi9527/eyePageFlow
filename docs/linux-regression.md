@@ -48,12 +48,13 @@ git log -1 --oneline          # 應為 e432a87 之後
 
 ```bash
 ./scripts/gradlew-local.sh installDist
-JAVA_HOME="$PWD/.local/jbr-21" JAVA_OPTS="-Dawt.toolkit.name=WLToolkit" \
-  build/install/eyePageFlow/bin/eyePageFlow
+JAVA_HOME="$PWD/.local/jbr-21" build/install/eyePageFlow/bin/eyePageFlow
 ```
 
-- 啟動 log 必須是 `toolkit=sun.awt.wl.WLToolkit` 才算原生 Wayland
-- X11 版把 `WLToolkit` 換成 `XToolkit`，log 應為 `sun.awt.X11.XToolkit`
+- toolkit 由程式依 session 自動選擇；啟動 log 必須是 `toolkit=sun.awt.wl.WLToolkit`
+  才算原生 Wayland，`session=` 應為 `wayland`。
+- X11 session（或 XWayland 測試）要強制指定：`EYEPAGEFLOW_TOOLKIT=XToolkit`，
+  log 應為 `sun.awt.X11.XToolkit`。不要再依賴 `-Dawt.toolkit.name`，JBR 會自己塞預設值。
 
 ## 6. 這批改動要看的重點
 

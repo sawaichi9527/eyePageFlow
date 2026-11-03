@@ -57,16 +57,18 @@ Windows（pwsh7）：
 
 ```bash
 ./scripts/gradlew-local.sh installDist
-JAVA_HOME="$PWD/.local/jbr-21" \
-  JAVA_OPTS="-Dawt.toolkit.name=WLToolkit" \
-  build/install/eyePageFlow/bin/eyePageFlow
+JAVA_HOME="$PWD/.local/jbr-21" build/install/eyePageFlow/bin/eyePageFlow
 ```
 
-X11／XWayland 啟動：
+- toolkit 由程式依 session 自動選擇（Linux + Wayland + JBR 才用 `WLToolkit`），
+  啟動 log 會印出 `toolkit=` 與 `ui font=`；這一行就是驗證依據。
+- 不要再用 `-Dawt.toolkit.name=XToolkit`：JBR 自己會把同一個屬性當預設塞進 JVM，
+  無法與使用者指定區分，會被自動選擇覆蓋。
+
+X11／XWayland 啟動（需要強制指定時）：
 
 ```bash
-JAVA_HOME="$PWD/.local/jbr-21" \
-  JAVA_OPTS="-Dawt.toolkit.name=XToolkit" \
+JAVA_HOME="$PWD/.local/jbr-21" EYEPAGEFLOW_TOOLKIT=XToolkit \
   build/install/eyePageFlow/bin/eyePageFlow
 ```
 

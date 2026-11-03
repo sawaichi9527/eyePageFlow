@@ -112,9 +112,17 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 
 ```bash
 ./scripts/gradlew-local.sh installDist
-JAVA_HOME="$PWD/.local/jbr-21" \
-  JAVA_OPTS="-Dawt.toolkit.name=WLToolkit" \
-  build/install/eyePageFlow/bin/eyePageFlow
+JAVA_HOME="$PWD/.local/jbr-21" build/install/eyePageFlow/bin/eyePageFlow
+```
+
+toolkit 由程式依 session 自動選擇（Linux + Wayland + JBR 用 `WLToolkit`），
+需要強制指定時用 `EYEPAGEFLOW_TOOLKIT=XToolkit`（`-Dawt.toolkit.name` 會被 JBR 的預設值混淆）。
+
+打包（app-image + tar.gz + `.desktop`）：
+
+```bash
+./scripts/package-linux.sh
+build/package/eyePageFlow/bin/eyePageFlow
 ```
 
 原型快捷鍵：`V` 直排／橫排、`D` 單頁／雙頁、`T` 主題、`B` 低調模式、方向鍵／PgUp／PgDn 翻頁。
@@ -128,7 +136,7 @@ Linux（Ubuntu 26.04.1 LTS x86_64、Wayland、JBR 21.0.11）：
   - 直排：8,323 頁、447.4 ms
 - 原生 Wayland：`toolkit=sun.awt.wl.WLToolkit`
 - XWayland 路徑：`toolkit=sun.awt.X11.XToolkit`
-- 測試：`./scripts/gradlew-local.sh test` 通過（71 tests，0 failures）
+- 測試：`./scripts/gradlew-local.sh test` 通過（77 tests，0 failures）
 - UI 文字：`Noto Sans CJK TC 15pt`（JBR Wayland 原本只算出 13pt）
 - 排版：`startup typography: fontSize=26.0 font=Noto Serif CJK TC/26`、20 欄／頁
 

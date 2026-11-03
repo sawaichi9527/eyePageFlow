@@ -1,9 +1,11 @@
 package io.github.sawaichi9527.eyepageflow
 
 import io.github.sawaichi9527.eyepageflow.platform.SingleInstance
+import io.github.sawaichi9527.eyepageflow.platform.ToolkitSelection
 import java.nio.file.Path
 
 fun main(args: Array<String>) {
+    applyToolkitSelection()
     when {
         args.contains("--help") || args.contains("-h") -> printHelp()
         args.contains("--benchmark") -> Benchmark.run()
@@ -41,8 +43,36 @@ fun main(args: Array<String>) {
     }
 }
 
-private fun printHelp() {
-    println(
+/**
+ * 設定 AWT toolkit（必須在 AWT 初始化前呼叫）。
+ *
+ * 細節見 [ToolkitSelection]：Linux + Wayland + JBR 才用 WLToolkit，
+ * 其他環境沿用 JVM 預設，避免 launcher 寫死造成 X11 無法啟動。
+ *
+ * 覆寫請用 `-Deyepageflow.toolkit=XToolkit` 或 `EYEPAGEFLOW_TOOLKIT`。
+ * 不能用 `awt.toolkit.name` 判斷「使用者是否指定」：JBR 啟動時就會把它塞進 JVM 參數。
+ */
+private fun applyToolkitSelection() {
+    val hasWaylandToolkit = try {
+        // initialize=false：只確認類別存在，不觸發 WLToolkit 的 native 靜態初始化
+        // （直接 Class.forName 會丟 UnsatisfiedLinkError）。
+        Class.forName("sun.awt.wl.WLToolkit", false, ClassLoader.getSystemClassLoader())
+        true
+    } catch (_: Throwable) {
+        false
+    }
+    val override = System.getenv(ToolkitSelection.OVERRIDE_ENV)
+        ?: System.getProperty(ToolkitSelection.OVERRIDE_PROPERTY)
+    val toolkit = ToolkitSelection.decide(
+        osName = System.getProperty("os.name") ?: "",
+        sessionType = System.getenv("XDG_SESSION_TYPE"),
+        hasWaylandToolkit = hasWaylandToolkit,
+        override = override,
+    ) ?: return
+    System.setProperty("awt.toolkit.name", toolkit)
+}
+
+private fun printHelp() {    println(
         """
         eyePageFlow M0 prototype
 
