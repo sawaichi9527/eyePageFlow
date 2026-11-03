@@ -69,6 +69,8 @@ data class PageMetrics(
     val underline: Boolean = false,
     val underlineWidth: Float = 1f,
     val punctuationPlacement: VerticalPunctuation = VerticalPunctuation.CENTER,
+    /** 橫排時把換行後的行拉齊到內容區右緣（段末行不拉）。 */
+    val justify: Boolean = true,
 ) {
     val contentWidth: Int
         get() = pageWidth - marginLeft - marginRight
@@ -186,6 +188,7 @@ class PaginationEngine(
     ): WalkResult {
         val maxLines = floor(metrics.contentHeight / metrics.lineHeight).toInt().coerceAtLeast(1)
         val glyphs: MutableList<PlacedGlyph>? = if (collect) ArrayList() else null
+        val lineGlyphs = ArrayList<PlacedGlyph>()
         var index = start
         var line = 0
         var x = metrics.marginLeft.toFloat()
@@ -195,10 +198,18 @@ class PaginationEngine(
         val pageTop = metrics.marginTop.toFloat()
         val indent = metrics.fontSize * metrics.paragraphIndentEm
 
+        fun flushLine(justify: Boolean) {
+            if (!collect || lineGlyphs.isEmpty()) return
+            if (justify) justifyLine(lineGlyphs)
+            glyphs?.addAll(lineGlyphs)
+            lineGlyphs.clear()
+        }
+
         while (index < limitEnd && line < maxLines) {
             val c = text[index]
             if (c == '\r' || c == '\n') {
                 index += if (c == '\r' && index + 1 < limitEnd && text[index + 1] == '\n') 2 else 1
+                flushLine(justify = false)
                 line += 1
                 x = metrics.marginLeft.toFloat()
                 lineHasContent = false
@@ -217,6 +228,7 @@ class PaginationEngine(
                 isPunctuationCandidate(c, text.getOrNull(index + 1), limitEnd, index) &&
                 shouldBreakBeforeHorizontal(text, index, limitEnd, x, width)
             ) {
+                flushLine(justify = true)
                 line += 1
                 if (line >= maxLines) break
                 x = metrics.marginLeft.toFloat()
@@ -226,6 +238,7 @@ class PaginationEngine(
             }
 
             if (lineHasContent && x - metrics.marginLeft + width > metrics.contentWidth) {
+                flushLine(justify = true)
                 line += 1
                 if (line >= maxLines) break
                 x = metrics.marginLeft.toFloat()
@@ -234,22 +247,50 @@ class PaginationEngine(
                 continue
             }
 
-            glyphs?.add(
-                PlacedGlyph(
-                    char = c,
-                    x = x,
-                    y = pageTop + line * lineHeight,
-                    cellWidth = width,
-                    cellHeight = lineHeight,
-                    underline = metrics.underline,
-                ),
-            )
+            if (collect) {
+                lineGlyphs.add(
+                    PlacedGlyph(
+                        char = c,
+                        x = x,
+                        y = pageTop + line * lineHeight,
+                        cellWidth = width,
+                        cellHeight = lineHeight,
+                        underline = metrics.underline,
+                    ),
+                )
+            }
             x += width
             index += 1
             lineHasContent = true
         }
 
+        // 走到頁尾時，最後一行其實是被寬度擠滿的行（頁面還有後續內容）→ 拉齊；
+        // 若已到文件結尾，那是段末行，不拉齊。
+        flushLine(justify = limitEnd < text.length)
         return WalkResult(index, glyphs ?: emptyList(), line, 0)
+    }
+
+    /**
+     * 橫排左右對齊：把行內剩餘寬度平均分配到字與字之間。
+     * 只處理「因為寬度不足而換行」的行；段末行、太鬆的行（> 0.5em）不動。
+     */
+    private fun justifyLine(lineGlyphs: MutableList<PlacedGlyph>) {
+        if (!metrics.justify || lineGlyphs.size < 2) return
+        val last = lineGlyphs.last()
+        val used = last.x + last.cellWidth - metrics.marginLeft
+        val slack = metrics.contentWidth - used
+        if (slack <= 0f) return
+        val gaps = lineGlyphs.size - 1
+        val extra = slack / gaps
+        if (extra > metrics.fontSize * 0.5f) return
+        var shift = 0f
+        for (i in lineGlyphs.indices) {
+            if (i > 0) shift += extra
+            if (shift != 0f) {
+                val glyph = lineGlyphs[i]
+                lineGlyphs[i] = glyph.copy(x = glyph.x + shift)
+            }
+        }
     }
 
     private fun walkVertical(

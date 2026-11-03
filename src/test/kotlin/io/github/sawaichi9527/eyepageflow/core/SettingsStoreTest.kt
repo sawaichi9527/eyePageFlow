@@ -95,10 +95,12 @@ class SettingsStoreTest {
             underline = true,
             underlineWidth = 2.5f,
             punctuationPlacement = VerticalPunctuation.TOP_RIGHT,
+            justify = false,
         )
         store.saveDisplaySettings(display)
         val loaded = store.load()
         assertEquals(2.5f, loaded.display.underlineWidth)
         assertEquals(VerticalPunctuation.TOP_RIGHT, loaded.display.punctuationPlacement)
+        assertEquals(false, loaded.display.justify)
     }
 }

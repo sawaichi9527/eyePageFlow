@@ -156,6 +156,50 @@ class PaginationTest {
         }
     }
 
+    @Test
+    fun `horizontal wrapping lines are justified to the content edge`() {
+        val source = buildString { repeat(80) { append("測試文字段落內容") } }
+        val engine = PaginationEngine(source, metrics, WritingMode.HORIZONTAL, font)
+        val pagination = engine.paginate()
+        val lines = engine.compose(pagination.page(0)).glyphs
+            .groupBy { it.y }
+            .values
+            .map { line -> line.sortedBy { it.x } }
+
+        assertTrue(lines.size > 2, "樣本應該產生多行")
+        val contentRight = metrics.marginLeft + metrics.contentWidth
+        lines.forEach { line ->
+            val right = line.last().x + line.last().cellWidth
+            assertEquals(contentRight.toFloat(), right, 1.0f)
+        }
+    }
+
+    @Test
+    fun `justify can be disabled`() {
+        val source = buildString { repeat(80) { append("測試文字段落內容") } }
+        val ragged = metrics.copy(justify = false)
+        val engine = PaginationEngine(source, ragged, WritingMode.HORIZONTAL, font)
+        val pagination = engine.paginate()
+        val lines = engine.compose(pagination.page(0)).glyphs
+            .groupBy { it.y }
+            .values
+            .map { line -> line.sortedBy { it.x } }
+
+        val contentRight = ragged.marginLeft + ragged.contentWidth
+        val shortLines = lines.count { line ->
+            line.last().x + line.last().cellWidth < contentRight - 1f
+        }
+        assertTrue(shortLines > lines.size / 2, "關閉對齊後多數行應留自然行尾空白")
+    }
+
+    @Test
+    fun `paragraph last line is not stretched`() {
+        val engine = PaginationEngine("測試文字", metrics, WritingMode.HORIZONTAL, font)
+        val glyphs = engine.compose(engine.paginate().page(0)).glyphs
+        val last = glyphs.last()
+        assertTrue(last.x + last.cellWidth < metrics.marginLeft + metrics.contentWidth - 1f)
+    }
+
     private fun verticalGlyphs(source: String): List<PlacedGlyph> {
         val engine = PaginationEngine(source, metrics, WritingMode.VERTICAL, font)
         val pagination = engine.paginate()

@@ -28,6 +28,7 @@ data class DisplaySettings(
     val underlineColor: Int = 0x2A2622,
     val underlineWidth: Float = 1f,
     val punctuationPlacement: VerticalPunctuation = VerticalPunctuation.CENTER,
+    val justify: Boolean = true,
     val animation: PageTurnAnimation = PageTurnAnimation.NONE,
     val desktopPatternId: String = "desktop.wood-dark",
     val coverPatternId: String = "cover.leather-brown",
@@ -47,6 +48,7 @@ data class DisplaySettings(
         underline = underline,
         underlineWidth = underlineWidth,
         punctuationPlacement = punctuationPlacement,
+        justify = justify,
     )
 
     fun usesDoublePage(): Boolean = layoutMode != LayoutMode.SINGLE

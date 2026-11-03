@@ -140,6 +140,7 @@ class DisplaySettingsDialog(
     )
     private val boldCheck = JCheckBox("加粗", initial.bold)
     private val underlineCheck = JCheckBox("顯示下劃線", initial.underline)
+    private val justifyCheck = JCheckBox("左右對齊（橫排）", initial.justify)
     private val underlineWidthLabels = arrayOf("淡", "普通", "粗黑")
     private val underlineWidthValues = floatArrayOf(0.5f, 1.0f, 1.5f)
     private val underlineWidthCombo = JComboBox(underlineWidthLabels)
@@ -219,6 +220,7 @@ class DisplaySettingsDialog(
         row("大小（點）", fontSizeSpinner)
         row("高度（%）", lineHeightSpinner)
         row("直排標點", punctuationCombo)
+        row("", justifyCheck)
         row("", boldCheck)
         row("", underlineCheck)
         row("下劃線顏色", underlineColorButton)
@@ -308,6 +310,7 @@ class DisplaySettingsDialog(
         lineHeightSpinner.value = (draft.lineHeightFactor * 100).roundToInt()
         boldCheck.isSelected = draft.bold
         underlineCheck.isSelected = draft.underline
+        justifyCheck.isSelected = draft.justify
         underlineWidthCombo.selectedIndex = nearestUnderlineWidthIndex(draft.underlineWidth)
         punctuationCombo.selectedIndex = VerticalPunctuation.entries.indexOf(draft.punctuationPlacement)
         animationCombo.selectedIndex = PageTurnAnimation.entries.indexOf(draft.animation)
@@ -354,6 +357,7 @@ class DisplaySettingsDialog(
         lineHeightSpinner.addChangeListener { updateDraft() }
         boldCheck.addActionListener { updateDraft() }
         underlineCheck.addActionListener { updateDraft() }
+        justifyCheck.addActionListener { updateDraft() }
         underlineWidthCombo.addActionListener { updateDraft() }
         punctuationCombo.addActionListener { updateDraft() }
         animationCombo.addActionListener { updateDraft() }
@@ -512,6 +516,7 @@ class DisplaySettingsDialog(
             underlineColor = underlineColor.rgb and 0xFFFFFF,
             underlineWidth = underlineWidthValues[underlineWidthCombo.selectedIndex],
             punctuationPlacement = VerticalPunctuation.entries[punctuationCombo.selectedIndex],
+            justify = justifyCheck.isSelected,
             gutterColor = gutterColor.rgb and 0xFFFFFF,
         )
         preview.settings = draft
