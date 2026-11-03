@@ -6,7 +6,7 @@
 
 已完成規格文件、Gradle 骨架、編碼偵測、字寬表分頁、Java2D 書頁渲染、Swing 原型、10 MiB benchmark、JBR 21 原生 Wayland／XToolkit 啟動，以及文件讀寫與基本開檔／存檔。
 
-顯示設定、空白狀態、雙擊開檔、翻頁動畫與整頁下劃線已完成；編輯模式已接上 RSyntaxTextArea，可切換閱讀／編輯、偵測 dirty、存檔同步、尋找／取代、單頁書本外觀與 undo/redo 100 上限，並有關窗未儲存提示。章節列表支援可切換規則與目前章節標示；顯示設定、章節規則、書籤、最近開啟檔案與書庫會存到 XDG／AppData。檔案列表、書庫管理、老闆鍵（最小化）與單一實例已完成。尚未完成檔案關聯註冊、Windows GUI 互動驗證與 Ubuntu 24.04 X11 驗證。
+顯示設定、空白狀態、雙擊開檔、翻頁動畫與整頁下劃線已完成；編輯模式已接上 RSyntaxTextArea，可切換閱讀／編輯、偵測 dirty、存檔同步、尋找／取代、單頁書本外觀與 undo/redo 100 上限，並有關窗未儲存提示。章節列表支援可切換規則與目前章節標示；顯示設定、章節規則、書籤、最近開啟檔案與書庫會存到 XDG／AppData。檔案列表、書庫管理、老闆鍵（最小化）與單一實例已完成。尚未完成檔案關聯註冊與 Windows GUI 互動驗證；Ubuntu 24.04 原生 X11 驗證已延後（P3）。
 
 Ubuntu 26.04 Wayland 已完成本輪回歸：67 個測試、benchmark、渲染快照、JBR 原生 Wayland／XWayland 啟動與 Big5 開檔皆通過；過程中修掉一個只在 Linux 失敗的字型相依測試。
 
@@ -82,7 +82,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 ## In progress
 
-- Ubuntu 24.04 原生 X11 驗證尚未執行。
+- Ubuntu 24.04 原生 X11 驗證尚未執行（已延後至 P3）。
 - Windows GUI 互動驗證（拖放、IME、125%／150% 縮放、檔案對話框、編輯存檔）尚未執行；建置、測試、渲染、benchmark、啟動、托盤與單一實例已完成。
 - 直排標點位置（部分字型缺直排形式）、標點擠壓、頁面底部孤行控制仍未完成。
 - 尚未做 golden image 基準與字型子集。
@@ -110,7 +110,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 9. Windows MSI（jpackage）＋檔案關聯註冊。
 10. Linux AppImage；修掉 app-image 寫死 `-Dawt.toolkit.name=WLToolkit`。
-11. ~~Ubuntu 26.04 Wayland 回歸~~（已完成：67 tests、benchmark、渲染、WLToolkit／XToolkit、Big5 開檔；清單見 `docs/linux-regression.md`）。剩下 Ubuntu 24.04 原生 X11。
+11. ~~Ubuntu 26.04 Wayland 回歸~~（已完成：67 tests、benchmark、渲染、WLToolkit／XToolkit、Big5 開檔；清單見 `docs/linux-regression.md`）。Ubuntu 24.04 原生 X11 已延後至 P3。
 
 ### P3 體驗
 
@@ -118,6 +118,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 13. CURL 翻頁動畫改為實際捲頁。
 14. 內嵌 Noto Serif CJK TC（OFL），讓 Windows／Linux 字型一致。
 15. GNOME／Wayland 的托盤替代方案。
+16. Ubuntu 24.04 原生 X11 回歸（**延後**：目前開發機只有 Wayland session；清單見 `docs/linux-regression.md`，需要 Xorg session 的機器）。
 
 ## Validation evidence
 
@@ -181,7 +182,7 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 尚未驗證（本次）：
 
 - Windows GUI 互動：拖放、IME、125%／150% 縮放、檔案對話框、剪貼簿、編輯後存檔、關窗提示。
-- Linux 原生 X11（需 Xorg session）與 Ubuntu 24.04；Ubuntu 26.04 Wayland 已於 2026-11-03 完成回歸，見下節。
+- Linux 原生 X11（需 Xorg session，已延後至 P3）與 Ubuntu 24.04；Ubuntu 26.04 Wayland 已於 2026-11-03 完成回歸，見下節。
 - 打包（MSI／AppImage）與檔案關聯註冊。
 
 ### Linux 回歸（2026-11-03，Ubuntu 26.04.1 LTS / Wayland）
@@ -253,7 +254,7 @@ JBR 下載與 checksum：
 
 尚未驗證：
 
-- Ubuntu 24.04 原生 X11（需 Xorg session）。
+- Ubuntu 24.04 原生 X11（需 Xorg session，已延後至 P3）。
 - Ubuntu 24.04 Wayland。
 - Ubuntu 26.04 Wayland 的 GUI 互動（拖放、IME、縮放、檔案對話框、剪貼簿、編輯存檔、`AUTO` 版面切換）。
 - Windows 10／11 其他版本（本次為 Windows 10 IoT 企業版 LTSC 21H2／19044）。
@@ -286,4 +287,4 @@ JBR 下載與 checksum：
 
 ## M0 判定
 
-**Go。** 分頁速度、直排／橫排渲染、JBR 原生 Wayland、app-image 啟動都已在目前環境驗證。Windows 端已補上建置、測試、渲染、benchmark、GUI 啟動與單一實例；禁則、左右對齊、offset↔page、surrogate pair 已完成。最大風險改為：排版改動尚未在 Linux 回歸、Windows GUI 互動（拖放／IME／縮放／編輯存檔）未驗證、Ubuntu 24.04 X11 未驗證。
+**Go。** 分頁速度、直排／橫排渲染、JBR 原生 Wayland、app-image 啟動都已在目前環境驗證。Windows 端已補上建置、測試、渲染、benchmark、GUI 啟動與單一實例；禁則、左右對齊、offset↔page、surrogate pair 已完成，Ubuntu 26.04 Wayland 回歸也已通過。最大風險改為：Windows GUI 互動（拖放／IME／縮放／編輯存檔）未驗證、Ubuntu 24.04 原生 X11（已延後至 P3）未驗證。
