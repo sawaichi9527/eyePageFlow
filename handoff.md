@@ -38,6 +38,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - 修正下劃線顏色污染文字：`drawPageUnderlines` 改掉畫筆顏色後沒有還原，字就沿用下劃線色。
 - 修正直排 `UTF-8` 的連字號壓在 `8` 上：半角標點改為與拉丁字串一起旋倒，並把窄字在字格內垂直置中。
 - `RenderRegressionTest`：4 個書頁渲染回歸測試（字色不被下劃線污染、字墨符合字級、窄字不溢出、標點右上位置），刻意用像素性質而非跨平台 golden image。
+- 禁則：`NO_LINE_START`／`NO_LINE_END` 查表，橫排與直排都在換行前用前瞻避開孤字；連續關閉標點整段帶到下一個行／欄。`PaginationTest` 驗證每一行／欄的首尾字元。
 - `core/TextEncoding.kt`：BOM、UTF-8、UTF-16 LE/BE、Big5、GB18030 偵測與換行偵測。
 - `core/TextDocument.kt`、`core/DocumentIO.kt`：文件模型、開檔、存檔、原編碼／BOM 保留、無法表示字元的 fallback 結果。
 - `core/Pagination.kt`：字寬表分頁、橫排／直排、段落縮排、直排形式標點、拉丁字母旋轉。
@@ -77,7 +78,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 - Ubuntu 24.04 原生 X11 驗證尚未執行。
 - Windows GUI 互動驗證（拖放、IME、125%／150% 縮放、檔案對話框、編輯存檔）尚未執行；建置、測試、渲染、benchmark、啟動、托盤與單一實例已完成。
-- 直排標點、禁則、左右對齊仍是原型等級。
+- 直排標點與左右對齊仍是原型等級（禁則已完成）。
 - 尚未做 golden image 基準與字型子集。
 - 目前環境的 GNOME／Wayland 不支援 `SystemTray`，老闆鍵會退回最小化；托盤在有支援的桌面才會安裝。
 - `AUTO`／`EQUAL_HEIGHT` 目前都當成雙頁；尚未依視窗比例或固定頁寬做真正區分。
@@ -93,7 +94,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 ### P1 排版正確性（M3，約 1–2 天）
 
-4. 禁則：句號／逗號／問號／驚嘆號不得出現在行首，開引號／開括號不得出現在行尾。
+4. ~~禁則~~（已完成：關閉標點不落行首／欄首、開括號不落行尾／欄尾，連續標點整段帶走）。
 5. 橫排左右對齊（justify）。
 6. offset↔page 對應測試（編輯 caret ↔ 閱讀頁碼）。
 7. Surrogate pair（emoji／罕用字）不被拆成兩半。
@@ -210,7 +211,7 @@ JBR 下載與 checksum：
 - `pwsh -File <script> --args="C:\path"` 會把磁碟機代號的 `:` 當成參數分隔而拆成兩個引數；請直接用 `.\scripts\gradlew-local.ps1 run --args="C:\path"`，或改用 `pwsh -Command "& '.\scripts\gradlew-local.ps1' run '--args=C:\path'"`。
 - 行尾由 `.gitattributes` 統一（文字檔 LF、`*.bat`／`*.cmd` CRLF）。既有 clone 若仍顯示整批 modified，執行 `git add --renormalize .` 或重新 clone。
 - 直排標點目前使用 Unicode 直排形式；部分字型不支援時會 fallback，尚未量測。
-- 禁則（行首／行尾標點）與左右對齊未實作。
+- 禁則（行首／行尾標點）已完成；左右對齊未實作。
 - 直排縮排以「欄頂跳 2 格」近似；遇到新頁或空白行仍需更多測試。
 - 尚未處理 surrogate pair；emoji／罕用字可能被拆開。
 - 每次重繪都重新產生程序化材質；動畫前需要快取。

@@ -12,6 +12,31 @@ enum class WritingMode {
     VERTICAL,
 }
 
+/** 不可出現在行首／欄首的字元（關閉類標點）。 */
+internal val NO_LINE_START: Set<Char> = setOf(
+    '。', '、', '，', '．', '：', '；', '！', '？',
+    '）', '」', '』', '】', '》', '〉', '〕', '］', '｝',
+    '…', '—', '～', '・',
+)
+
+/** 不可出現在行尾／欄尾的字元（開啟類標點）。 */
+internal val NO_LINE_END: Set<Char> = setOf(
+    '（', '「', '『', '【', '《', '〈', '〔', '［', '｛',
+)
+
+/** 查表版：避免每次禁則判斷都對 Char 裝箱。 */
+private val NO_LINE_START_TABLE = BooleanArray(Char.MAX_VALUE.code + 1).also { table ->
+    NO_LINE_START.forEach { table[it.code] = true }
+}
+
+private val NO_LINE_END_TABLE = BooleanArray(Char.MAX_VALUE.code + 1).also { table ->
+    NO_LINE_END.forEach { table[it.code] = true }
+}
+
+private fun isNoLineStart(c: Char): Boolean = NO_LINE_START_TABLE[c.code]
+
+private fun isNoLineEnd(c: Char): Boolean = NO_LINE_END_TABLE[c.code]
+
 /** 直排時 CJK 標點（。、，：；）在字格內的位置。 */
 enum class VerticalPunctuation(val label: String) {
     CENTER("置中"),
@@ -176,6 +201,20 @@ class PaginationEngine(
             }
 
             val width = charWidth(c)
+            // 禁則：若下一個字是行首禁則字、或本字是行尾禁則字，寧可提早換行。
+            // 只有接近行尾時才需要檢查，避免每字都多一次前瞻成本。
+            if (lineHasContent &&
+                x - metrics.marginLeft + width + metrics.fontSize * 3f > metrics.contentWidth &&
+                shouldBreakBeforeHorizontal(text, index, limitEnd, x, width)
+            ) {
+                line += 1
+                if (line >= maxLines) break
+                x = metrics.marginLeft.toFloat()
+                lineHasContent = false
+                indentNextLine = false
+                continue
+            }
+
             if (lineHasContent && x - metrics.marginLeft + width > metrics.contentWidth) {
                 line += 1
                 if (line >= maxLines) break
@@ -238,6 +277,16 @@ class PaginationEngine(
 
             val style = verticalStyle(c)
             val advance = verticalAdvance(c)
+            // 禁則：欄底換欄前，先確認下一個字不會變成欄首禁則字。
+            if (cursor > 0f &&
+                cursor + advance + metrics.fontSize * 3f > columnHeight &&
+                shouldBreakBeforeVertical(text, index, limitEnd, cursor, advance, columnHeight)
+            ) {
+                column += 1
+                cursor = 0f
+                indentNextColumn = false
+                continue
+            }
             if (cursor > 0f && cursor + advance > columnHeight) {
                 column += 1
                 cursor = 0f
@@ -279,6 +328,59 @@ class PaginationEngine(
         } else {
             width.coerceAtLeast(metrics.fontSize * 0.3f)
         }
+    }
+
+    /**
+     * 橫排禁則：若目前這個字放下去之後，緊接的一整段關閉標點（`」！` 這類）
+     * 會被擠到下一行，就提早換行，讓這段標點跟著前一個字一起走。
+     * 反過來，若目前是開括號，也不能讓它單獨留在行尾。
+     */
+    private fun shouldBreakBeforeHorizontal(
+        text: String,
+        index: Int,
+        limitEnd: Int,
+        x: Float,
+        width: Float,
+    ): Boolean {
+        val next = text.getOrNull(index + 1) ?: return false
+        if (index + 1 >= limitEnd || next == '\r' || next == '\n') return false
+        val usedBefore = x - metrics.marginLeft + width
+        if (isNoLineEnd(text[index])) {
+            return usedBefore + charWidth(next) > metrics.contentWidth
+        }
+        if (!isNoLineStart(next)) return false
+        var used = usedBefore
+        var cursor = index + 1
+        while (cursor < limitEnd && isNoLineStart(text[cursor])) {
+            used += charWidth(text[cursor])
+            cursor += 1
+        }
+        return used > metrics.contentWidth
+    }
+
+    /** 直排禁則：同橫排，只是把「行」換成「欄」。 */
+    private fun shouldBreakBeforeVertical(
+        text: String,
+        index: Int,
+        limitEnd: Int,
+        cursor: Float,
+        advance: Float,
+        columnHeight: Float,
+    ): Boolean {
+        val next = text.getOrNull(index + 1) ?: return false
+        if (index + 1 >= limitEnd || next == '\r' || next == '\n') return false
+        val usedBefore = cursor + advance
+        if (isNoLineEnd(text[index])) {
+            return usedBefore + verticalAdvance(next) > columnHeight
+        }
+        if (!isNoLineStart(next)) return false
+        var used = usedBefore
+        var probe = index + 1
+        while (probe < limitEnd && isNoLineStart(text[probe])) {
+            used += verticalAdvance(text[probe])
+            probe += 1
+        }
+        return used > columnHeight
     }
 
     private fun charWidth(c: Char): Float = widthCache.getOrPut(c) {

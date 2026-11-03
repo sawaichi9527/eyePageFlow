@@ -114,6 +114,46 @@ class PaginationTest {
         assertEquals(topRight.fontSize, comma.cellHeight, 0.01f)
     }
 
+    @Test
+    fun `kinsoku keeps closing punctuation off line and column starts`() {
+        val source = buildString {
+            repeat(120) { append("測試文字，段落內容。還有（引號）與「書名」！") }
+        }
+        WritingMode.entries.forEach { mode ->
+            val engine = PaginationEngine(source, metrics, mode, font)
+            val pagination = engine.paginate()
+            val badStarts = ArrayList<String>()
+            val badEnds = ArrayList<String>()
+            pagination.pages.forEach { page ->
+                val glyphs = engine.compose(page).glyphs
+                if (glyphs.isEmpty()) return@forEach
+                val groups = if (mode == WritingMode.HORIZONTAL) {
+                    glyphs.groupBy { it.y }
+                } else {
+                    glyphs.groupBy { it.x }
+                }
+                groups.values.forEach { line ->
+                    val ordered = if (mode == WritingMode.HORIZONTAL) {
+                        line.sortedBy { it.x }
+                    } else {
+                        line.sortedBy { it.y }
+                    }
+                    val first = ordered.first()
+                    val last = ordered.last()
+                    if (first.char in NO_LINE_START) {
+                        val sample = ordered.take(14).joinToString("") { it.char.toString() }
+                        badStarts += "${mode.name} p${page.index} 行首為 '${first.char}' [$sample]"
+                    }
+                    if (last.char in NO_LINE_END) {
+                        badEnds += "${mode.name} p${page.index} 行尾為 '${last.char}'"
+                    }
+                }
+            }
+            assertTrue(badStarts.isEmpty(), badStarts.take(5).joinToString("; "))
+            assertTrue(badEnds.isEmpty(), badEnds.take(5).joinToString("; "))
+        }
+    }
+
     private fun verticalGlyphs(source: String): List<PlacedGlyph> {
         val engine = PaginationEngine(source, metrics, WritingMode.VERTICAL, font)
         val pagination = engine.paginate()
