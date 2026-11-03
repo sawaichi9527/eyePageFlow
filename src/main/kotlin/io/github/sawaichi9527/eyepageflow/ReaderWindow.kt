@@ -24,6 +24,7 @@ import io.github.sawaichi9527.eyepageflow.core.WritingMode
 import io.github.sawaichi9527.eyepageflow.platform.TrayService
 import io.github.sawaichi9527.eyepageflow.render.BookRenderer
 import io.github.sawaichi9527.eyepageflow.render.EmptyStateRenderer
+import io.github.sawaichi9527.eyepageflow.render.PageCurl
 import io.github.sawaichi9527.eyepageflow.render.Theme
 import io.github.sawaichi9527.eyepageflow.render.Typeface
 import io.github.sawaichi9527.eyepageflow.ui.BookmarkListDialog
@@ -194,6 +195,11 @@ object ReaderWindow {
         )
         println("toolkit=${Toolkit.getDefaultToolkit().javaClass.name}")
         UIManager.getFont("defaultFont")?.let { println("ui font: ${it.family} ${it.size}pt") }
+        println(
+            "page font: ${Typeface.pageFont(io.github.sawaichi9527.eyepageflow.core.PageMetrics()).name} " +
+                "(embedded=${Typeface.hasEmbeddedFont})",
+        )
+
     }
 }
 
@@ -216,6 +222,7 @@ private class ReaderPanel(
     private var mode = WritingMode.VERTICAL
     private var theme = Theme.fromSettings(settings)
     private var doublePage = settings.usesDoublePage()
+    private var equalHeight = settings.layoutMode == LayoutMode.EQUAL_HEIGHT
     private var showBookAndDesktop = settings.showBookAndDesktop
     private var engine = PaginationEngine(text, metrics, mode, pageFont)
     private var pagination: Pagination = engine.paginate()
@@ -501,6 +508,7 @@ private class ReaderPanel(
         pageFont = Typeface.pageFont(metrics, settings.fontFamily)
         theme = Theme.fromSettings(settings)
         doublePage = settings.usesDoublePage()
+        equalHeight = settings.layoutMode == LayoutMode.EQUAL_HEIGHT
         showBookAndDesktop = settings.showBookAndDesktop
         editorPane.applyTheme(theme, metrics, settings.fontFamily)
         persistSettings()
@@ -508,7 +516,7 @@ private class ReaderPanel(
         println(
             "display settings applied: fontSize=${settings.fontSize} " +
                 "lineHeight=${settings.lineHeightFactor} " +
-                "layout=${settings.layoutMode} pages=${pagination.pageCount}",
+                "layout=${settings.layoutMode} pages=${pagination.pageCount} font=${pageFont.name}",
         )
         updateStatus()
     }
@@ -995,6 +1003,24 @@ private class ReaderPanel(
     }
 
     private inner class BookCanvas : JPanel() {
+        init {
+            // AUTO：視窗變寬時自動改排雙頁（不必重新分頁，只換顯示）。
+            addComponentListener(
+                object : java.awt.event.ComponentAdapter() {
+                    override fun componentResized(event: java.awt.event.ComponentEvent) {
+                        if (settings.layoutMode != LayoutMode.AUTO) return
+                        val next = settings.doublePageFor(width, height)
+                        if (next == doublePage) return
+                        doublePage = next
+                        if (next) {
+                            spreadStart -= spreadStart % 2
+                        }
+                        repaint()
+                    }
+                },
+            )
+        }
+
         private var animationTimer: Timer? = null
         private var animationKind = PageTurnAnimation.NONE
         private var animationStartNs = 0L
@@ -1102,6 +1128,7 @@ private class ReaderPanel(
                     doublePage = doublePage,
                     showBookAndDesktop = showBookAndDesktop,
                     font = pageFont,
+                    scaleToPageHeight = equalHeight,
                 )
             }
         }
@@ -1124,7 +1151,11 @@ private class ReaderPanel(
                     composite.dispose()
                 }
 
-                PageTurnAnimation.SLIDE, PageTurnAnimation.CURL -> {
+                PageTurnAnimation.CURL -> {
+                    PageCurl.paint(graphics, old, new, progress)
+                }
+
+                PageTurnAnimation.SLIDE -> {
                     val offset = (width * progress).toInt()
                     graphics.drawImage(old, -offset, 0, null)
                     graphics.drawImage(new, width - offset, 0, null)

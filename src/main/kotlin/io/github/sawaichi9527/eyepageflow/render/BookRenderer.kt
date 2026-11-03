@@ -32,6 +32,7 @@ object BookRenderer {
         doublePage: Boolean,
         showBookAndDesktop: Boolean,
         font: Font,
+        scaleToPageHeight: Boolean = false,
     ) {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         g2.setRenderingHint(
@@ -62,10 +63,15 @@ object BookRenderer {
         }
         val logicalBookHeight = metrics.pageHeight.toFloat()
         val desktopMargin = 28f
-        val scale = min(
-            (targetWidth - desktopMargin * 2f) / logicalBookWidth,
-            (targetHeight - desktopMargin * 2f) / logicalBookHeight,
-        )
+        // 等高對稱：只依高度縮放，讓雙頁的字級和單頁一樣大（寬度不足時書頁會超出畫布）。
+        val scale = if (scaleToPageHeight) {
+            (targetHeight - desktopMargin * 2f) / logicalBookHeight
+        } else {
+            min(
+                (targetWidth - desktopMargin * 2f) / logicalBookWidth,
+                (targetHeight - desktopMargin * 2f) / logicalBookHeight,
+            )
+        }
         if (scale <= 0f) return
 
         val bookWidth = logicalBookWidth * scale

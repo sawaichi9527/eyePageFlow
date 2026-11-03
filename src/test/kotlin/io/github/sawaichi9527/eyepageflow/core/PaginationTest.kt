@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import kotlin.math.roundToInt
 
 class PaginationTest {
     private val text = SampleText.longText(repeat = 4)
@@ -58,7 +59,17 @@ class PaginationTest {
     @Test
     fun `vertical cjk keeps one em advance`() {
         val glyphs = verticalGlyphs("檔檔")
-        assertEquals(metrics.fontSize, glyphs[1].y - glyphs[0].y, 0.01f)
+        assertEquals(metrics.cellSpacing, glyphs[1].y - glyphs[0].y, 0.01f)
+    }
+
+    @Test
+    fun `vertical cell spacing spreads the leftover page height`() {
+        // 內容高 640、字級 18 → 35 列，剩 10px；平均分配後每列 640/35 ≈ 18.29。
+        assertTrue(metrics.cellSpacing > metrics.fontSize, "字距應該被放寬（實測 ${metrics.cellSpacing}）")
+        assertTrue(
+            metrics.cellSpacing <= metrics.fontSize * 1.05f,
+            "放寬不得超過 5%（實測 ${metrics.cellSpacing}）",
+        )
     }
 
     @Test
@@ -87,12 +98,25 @@ class PaginationTest {
     }
 
     @Test
-    fun `vertical cjk punctuation keeps its cell origin`() {
+    fun `vertical punctuation is centered in its cell`() {
         val glyphs = verticalGlyphs("檔，檔")
-        val first = glyphs[0]
+        val cell = glyphs[0]
         val comma = glyphs[1]
-        assertEquals(first.x, comma.x, 0.01f)
-        assertEquals(first.y + metrics.fontSize, comma.y, 0.01f)
+
+        val image = BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        graphics.font = font
+        val bounds = font.createGlyphVector(graphics.fontRenderContext, "，").visualBounds
+        val fontMetrics = graphics.fontMetrics
+        graphics.dispose()
+
+        // 繪圖端會把行框在字格內垂直置中，墨跡實際位置要扣掉這個補償。
+        val excess = (fontMetrics.ascent + fontMetrics.descent) - metrics.cellSpacing
+        val inkCenterX = comma.x + bounds.centerX.toFloat()
+        val inkCenterY = comma.y + fontMetrics.ascent - excess / 2f + bounds.centerY.toFloat()
+        // 逗號在第二格：垂直位置 = 第一格起點 + 1.5 格。
+        assertEquals(cell.x + metrics.fontSize / 2f, inkCenterX, 0.5f)
+        assertEquals(cell.y + metrics.cellSpacing * 1.5f, inkCenterY, 0.5f)
     }
 
     @Test
@@ -157,9 +181,8 @@ class PaginationTest {
     fun `consecutive punctuation is compressed vertically`() {
         val engine = PaginationEngine("檔。！檔", metrics, WritingMode.VERTICAL, font)
         val glyphs = engine.compose(engine.paginate().page(0)).glyphs
-        assertEquals(metrics.fontSize * 0.5f, glyphs[2].cellHeight, 0.01f)
-        assertEquals(metrics.fontSize, glyphs[1].cellHeight, 0.01f)
-        assertEquals(0f, glyphs[2].y - (glyphs[1].y + glyphs[1].cellHeight), 0.01f)
+        assertEquals(metrics.cellSpacing * 0.5f, glyphs[2].cellHeight, 0.01f)
+        assertEquals(metrics.cellSpacing, glyphs[1].cellHeight, 0.01f)
     }
 
     @Test
@@ -178,7 +201,7 @@ class PaginationTest {
         val cell = glyphs[0]
         val comma = glyphs[1]
 
-        assertEquals(topRight.fontSize, comma.cellHeight, 0.01f)
+        assertEquals(topRight.cellSpacing, comma.cellHeight, 0.01f)
 
         // 頁面字型若有直排逗號（U+FE10，例如 Linux 的 Noto Serif CJK TC），
         // 排版直接用該字形，不再額外位移；此時墨跡已由字型放在字格右上角。
@@ -199,7 +222,7 @@ class PaginationTest {
 
         val inkCenterX = (comma.x + bounds.centerX).toFloat()
         val inkCenterY = (comma.y + fontMetrics.ascent + bounds.centerY).toFloat()
-        val cellTop = cell.y + topRight.fontSize
+        val cellTop = cell.y + topRight.cellSpacing
         assertEquals(cell.x + topRight.fontSize * 0.75f, inkCenterX, 0.5f)
         assertEquals(cellTop + topRight.fontSize * 0.22f, inkCenterY, 0.5f)
     }
@@ -219,10 +242,13 @@ class PaginationTest {
             pagination.pages.forEach { page ->
                 val glyphs = engine.compose(page).glyphs
                 if (glyphs.isEmpty()) return@forEach
+                val pitch = metrics.fontSize * metrics.verticalColumnFactor
+                val leftMost = glyphs.minOf { it.x }
                 val groups = if (mode == WritingMode.HORIZONTAL) {
                     glyphs.groupBy { it.y }
                 } else {
-                    glyphs.groupBy { it.x }
+                    // 直排標點可能有置中位移，用欄距量化後再分組。
+                    glyphs.groupBy { ((it.x - leftMost) / pitch).roundToInt() }
                 }
                 groups.values.forEach { line ->
                     val ordered = if (mode == WritingMode.HORIZONTAL) {

@@ -52,4 +52,19 @@ data class DisplaySettings(
     )
 
     fun usesDoublePage(): Boolean = layoutMode != LayoutMode.SINGLE
+
+    /**
+     * AUTO 依畫布比例決定單／雙頁：視窗夠寬才排雙頁，否則單頁避免字變太小。
+     * 其他模式固定，不看畫布大小。
+     */
+    fun doublePageFor(width: Int, height: Int): Boolean = when (layoutMode) {
+        LayoutMode.SINGLE -> false
+        LayoutMode.DOUBLE, LayoutMode.EQUAL_HEIGHT -> true
+        LayoutMode.AUTO -> width >= height * AUTO_DOUBLE_RATIO
+    }
+
+    companion object {
+        /** AUTO 模式下，畫布寬高比超過這個值才排雙頁。 */
+        const val AUTO_DOUBLE_RATIO = 1.25f
+    }
 }

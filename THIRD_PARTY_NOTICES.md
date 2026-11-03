@@ -29,11 +29,13 @@
 
 ## Fonts
 
-### Noto Serif CJK TC
+### Noto Serif CJK TC（內嵌）
 
-- 授權：SIL Open Font License 1.1
+- 檔案：`src/main/resources/fonts/NotoSerifCJKtc-Regular.otf`（24 MB）
+- 授權：SIL Open Font License 1.1，完整條文見 `src/main/resources/fonts/OFL.txt`
 - 來源：https://github.com/notofonts/noto-cjk
-- 預計內嵌子集；需附 OFL 授權文字。
+- SHA-256：`234301038e76e7c35c43113785024700c4e4fe7bdce1d1fbbc42fca7e6683798`
+- 用途：預設頁面字型，讓 Windows／Linux 的頁數與字形一致；使用者可在顯示設定改選系統字型。
 
 ## Reference
 

@@ -7,6 +7,8 @@ import java.awt.GraphicsEnvironment
 object Typeface {
     const val DEFAULT_FAMILY = "Noto Serif CJK TC"
 
+    private const val EMBEDDED_SERIF_RESOURCE = "/fonts/NotoSerifCJKtc-Regular.otf"
+
     /**
      * 指定字型不存在時的替代順序：優先挑能顯示 CJK 的字型，
      * 避免落到拉丁字型後再由 Java 逐字 fallback（字重與字寬都會不一致）。
@@ -53,11 +55,33 @@ object Typeface {
         .availableFontFamilyNames
         .toSet()
 
-    fun pageFont(metrics: PageMetrics, family: String = DEFAULT_FAMILY): Font = Font(
-        resolveFamily(family),
-        if (metrics.bold) Font.BOLD else Font.PLAIN,
-        metrics.fontSize.toInt(),
-    )
+    /**
+     * 內嵌的 Noto Serif CJK TC（OFL）。有這個檔案時，預設字型不再依賴系統安裝，
+     * Windows 與 Linux 的頁數、字型才會一致。
+     */
+    private val embeddedFont: Font? by lazy { loadEmbeddedFont() }
+
+    /** 內嵌字型是否載入成功（診斷與測試用）。 */
+    val hasEmbeddedFont: Boolean get() = embeddedFont != null
+
+    private fun loadEmbeddedFont(): Font? = try {
+        Typeface::class.java.getResourceAsStream(EMBEDDED_SERIF_RESOURCE)?.use { stream ->
+            Font.createFont(Font.TRUETYPE_FONT, stream).also {
+                GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(it)
+            }
+        }
+    } catch (_: Throwable) {
+        null
+    }
+
+    fun pageFont(metrics: PageMetrics, family: String = DEFAULT_FAMILY): Font {
+        val style = if (metrics.bold) Font.BOLD else Font.PLAIN
+        val embedded = embeddedFont
+        if (embedded != null && family == DEFAULT_FAMILY) {
+            return embedded.deriveFont(style, metrics.fontSize)
+        }
+        return Font(resolveFamily(family), style, metrics.fontSize.toInt())
+    }
 
     /**
      * 頁面字型缺少某個字（例如 emoji）時，找一個能顯示它的系統字型。

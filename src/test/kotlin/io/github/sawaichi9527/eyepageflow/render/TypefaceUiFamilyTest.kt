@@ -2,11 +2,20 @@ package io.github.sawaichi9527.eyepageflow.render
 
 import java.awt.Font
 import java.awt.GraphicsEnvironment
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 
 class TypefaceUiFamilyTest {
+    @Test
+    fun `embedded serif font is available for page rendering`() {
+        assertTrue(Typeface.hasEmbeddedFont, "應該內嵌 Noto Serif CJK TC（OFL）")
+        val font = Typeface.pageFont(io.github.sawaichi9527.eyepageflow.core.PageMetrics())
+        assertTrue(font.canDisplay('檔'), "內嵌字型必須能顯示中文")
+        assertEquals("Noto Serif CJK TC", font.family)
+    }
+
     private val families = GraphicsEnvironment.getLocalGraphicsEnvironment()
         .availableFontFamilyNames
         .toSet()

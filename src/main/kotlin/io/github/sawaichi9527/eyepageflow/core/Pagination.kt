@@ -108,6 +108,20 @@ data class PageMetrics(
      * 堆在頁尾；這裡把剩餘高度平均分配給每一行，讓最後一行貼近下緣。
      * 只放寬不放寬超過 5%，避免小頁面被拉得太鬆；頁與頁之間間距一致（只跟版面參數有關）。
      */
+    /**
+     * 直排的實際字格高度（字距微調）。
+     *
+     * 與 [lineSpacing] 同理：一欄能放的字數固定，把剩下的高度平均分配給每一格，
+     * 讓最後一個字貼近下緣。最多放寬 5%，只跟版面參數有關，所以每頁一致。
+     */
+    val cellSpacing: Float
+        get() {
+            val rows = floor(contentHeight / fontSize).toInt().coerceAtLeast(1)
+            if (rows < 2) return fontSize
+            val filled = contentHeight.toFloat() / rows
+            return if (filled > fontSize && filled <= fontSize * 1.05f) filled else fontSize
+        }
+
     val lineSpacing: Float
         get() {
             val lines = floor(contentHeight / lineHeight).toInt().coerceAtLeast(1)
@@ -458,7 +472,7 @@ class PaginationEngine(
         collect: Boolean,
         limitEnd: Int,
     ): WalkResult {
-        val cellHeight = metrics.fontSize
+        val cellHeight = metrics.cellSpacing
         val columnPitch = metrics.fontSize * metrics.verticalColumnFactor
         val maxColumns = floor(metrics.contentWidth / columnPitch).toInt().coerceAtLeast(1)
         val rows = floor(metrics.contentHeight / cellHeight).toInt().coerceAtLeast(1)
@@ -566,7 +580,7 @@ class PaginationEngine(
     private fun verticalAdvance(c: Char): Float {
         val width = charWidth(c)
         return if (width >= metrics.fontSize * 0.9f) {
-            metrics.fontSize
+            metrics.cellSpacing
         } else {
             width.coerceAtLeast(metrics.fontSize * 0.5f)
         }
@@ -665,7 +679,9 @@ class PaginationEngine(
     private fun verticalStyle(c: Char): VerticalStyle {
         if (c in VERTICAL_PUNCTUATION_CHARS) {
             return when (metrics.punctuationPlacement) {
-                VerticalPunctuation.CENTER -> VerticalStyle()
+                // 「置中」要真的把墨跡放到字格中央；直接沿用基線會落在字格左下角。
+                VerticalPunctuation.CENTER ->
+                    punctuationCache.getOrPut(c) { centeredPunctuation(c) }
                 VerticalPunctuation.TOP_RIGHT -> {
                     val form = VERTICAL_FORMS[c]
                     if (form != null && font.canDisplay(form)) {
@@ -696,6 +712,24 @@ class PaginationEngine(
      */
     private fun isRotatedLatin(c: Char): Boolean =
         isLatinOrDigit(c) || c in ASCII_ROTATED
+
+    /**
+     * 把標點的墨跡置中於字格（「直排標點：置中」）。
+     *
+     * 繪圖端會把「行框」在字格內垂直置中（ascent + descent 通常比字格高），
+     * 所以這裡要把同一個補償量加回去，否則標點會被推到上一格。
+     */
+    private fun centeredPunctuation(c: Char): VerticalStyle {
+        val bounds = font.createGlyphVector(fontRenderContext, c.toString()).visualBounds
+        val centerX = (bounds.minX + bounds.width / 2f).toFloat()
+        val centerY = (bounds.minY + bounds.height / 2f).toFloat()
+        val cell = metrics.cellSpacing
+        val lineBoxExcess = ((fontMetrics.ascent + fontMetrics.descent) - cell).coerceAtLeast(0f)
+        return VerticalStyle(
+            xOffset = metrics.fontSize / 2f - centerX,
+            yOffset = cell / 2f + lineBoxExcess / 2f - fontMetrics.ascent - centerY,
+        )
+    }
 
     /**
      * 把標點的墨跡移到字格右上角（標準中文直排位置）。
