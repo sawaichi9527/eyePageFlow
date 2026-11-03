@@ -118,7 +118,66 @@ class RenderRegressionTest {
         assertTrue(centerY < cell.y + cell.height / 2, "標點應靠上 ($centerY vs ${cell.y + cell.height / 2})")
     }
 
+    @Test
+    fun `vertical cjk ink stays inside its cell`() {
+        // 直排字格高度 = 字號，但字型的 ascent + descent 更大；
+        // 沿用基線會讓墨跡往下溢，壓到下一個字（`第10段` 的數字）。
+        // 一次只畫一個字，避免掃描範圍吃到相鄰字的墨跡。
+        listOf('第', '檔', '段').forEach { c ->
+            assumeTrue(font.canDisplay(c), "需要能顯示 $c 的字型")
+            val page = render(c.toString(), metrics)
+            val glyph = page.glyphs.single()
+            val slot = slotOf(page, glyph)
+            val search = Rectangle(slot.x - 6, slot.y - 6, slot.width + 12, slot.height + 12)
+            val ink = inkBounds(page.image, search)
+            assertNotNull(ink, "'$c' 應該要畫在字格內")
+            assertTrue(
+                ink!!.y >= slot.y - 1 && ink.y + ink.height <= slot.y + slot.height + 1,
+                "'$c' 墨跡 ${ink.y}..${ink.y + ink.height} 超出字格 ${slot.y}..${slot.y + slot.height}",
+            )
+        }
+    }
+
+    @Test
+    fun `rotated narrow digit ink fits its advance slot`() {
+        // 26px 是預設字級；`1` 的字寬不到 0.3em，前進量若只取 0.3em，
+        // 旋倒後的墨跡會比字格高，直接壓到前後的中文字（第1段）。
+        val narrow = metrics.copy(fontSize = 26f)
+        val page = render("1", narrow)
+        val glyph = page.glyphs.single()
+        assertTrue(glyph.rotationDegrees != 0f, "數字應該被旋倒")
+
+        val slot = slotOf(page, glyph)
+        val search = Rectangle(slot.x - 6, slot.y - 6, slot.width + 12, slot.height + 12)
+        val ink = inkBounds(page.image, search)
+        assertNotNull(ink, "旋倒的 '1' 應該要畫在字格內")
+        assertTrue(
+            ink!!.y >= slot.y - 1 && ink.y + ink.height <= slot.y + slot.height + 1,
+            "旋倒的 '1' 墨跡 ${ink.y}..${ink.y + ink.height} 超出字格 ${slot.y}..${slot.y + slot.height}",
+        )
+    }
+
     // --- helpers -----------------------------------------------------------
+
+    /**
+     * 單一字的字格：寬度固定一個字，高度用該字實際的前進量。
+     * 旋倒的半角字只有 `cellHeight`（約半個字），不能套 `fontSize`。
+     */
+    private fun slotOf(page: RenderedPage, glyph: PlacedGlyph): Rectangle {
+        val first = page.glyphs.first()
+        var top = first.y
+        var index = 0
+        while (index < page.glyphs.size && page.glyphs[index] !== glyph) {
+            top += page.glyphs[index].cellHeight
+            index++
+        }
+        return Rectangle(
+            PAGE_MARGIN + first.x.toInt(),
+            PAGE_MARGIN + top.toInt(),
+            glyph.cellWidth.toInt(),
+            glyph.cellHeight.toInt(),
+        )
+    }
 
     private data class RenderedPage(
         val image: BufferedImage,

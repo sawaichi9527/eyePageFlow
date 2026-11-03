@@ -18,6 +18,9 @@ import kotlin.math.max
 import kotlin.math.min
 
 object BookRenderer {
+    /** 與畫面轉換無關的 FRC，用來量字形墨跡（旋轉字置中需要）。 */
+    private val INK_FRC = java.awt.font.FontRenderContext(null, true, true)
+
     fun render(
         g2: Graphics2D,
         targetWidth: Int,
@@ -326,7 +329,7 @@ object BookRenderer {
 
         val fontMetrics = pageGraphics.fontMetrics
         content.glyphs.forEach { glyph ->
-            drawGlyph(pageGraphics, glyph, fontMetrics)
+            drawGlyph(pageGraphics, glyph, fontMetrics, vertical)
         }
         pageGraphics.dispose()
     }
@@ -358,13 +361,23 @@ object BookRenderer {
         g2: Graphics2D,
         glyph: PlacedGlyph,
         metrics: FontMetrics,
+        vertical: Boolean,
     ) {
         val text = glyph.drawText
+        // 直排時字格高度 = 字號，但字型的 ascent + descent 通常更大（Noto Serif CJK 26px 是 38px），
+        // 若直接沿用基線，整個字會往下溢 6px，壓到下一個字（`第10段` 的數字就是這樣被壓到）。
+        // 這裡把「行框」在字格內垂直置中，只調整垂直方向、不動水平位置。
+        val lineBoxExcess = (metrics.ascent + metrics.descent) - glyph.cellHeight
+        val verticalOffset = if (vertical && glyph.rotationDegrees == 0f && lineBoxExcess > 0f) {
+            lineBoxExcess / 2f
+        } else {
+            0f
+        }
         // 窄字（半角標點等）若沿用基線，墨跡會溢到下一格；把 em 框在字格內置中。
         val baseline = if (glyph.rotationDegrees == 0f && glyph.cellHeight < glyph.cellWidth) {
             glyph.y + glyph.cellHeight / 2f + (metrics.ascent - metrics.descent) / 2f
         } else {
-            glyph.y + metrics.ascent
+            glyph.y + metrics.ascent - verticalOffset
         }
         if (glyph.rotationDegrees == 0f) {
             val baseFont = g2.font
@@ -420,9 +433,19 @@ object BookRenderer {
                 (glyph.y + glyph.cellHeight / 2f).toDouble(),
             )
             g2.rotate(Math.toRadians(glyph.rotationDegrees.toDouble()))
-            val width = metrics.charWidth(glyph.char).toFloat()
-            val centeredBaseline = (metrics.ascent - metrics.descent) / 2f
-            g2.drawString(text, -width / 2f, centeredBaseline)
+            // 旋轉後「沿欄方向」對應 x 軸、「跨欄方向」對應 y 軸。
+            // 這裡用墨跡邊界把字置中，不能靠基線推算：字型的 side bearing 與字高
+            // （ascent + descent 可能大於字格）會讓數字、拉丁字的墨跡偏出字格，
+            // 壓到前一個中文字，看起來就是「數字與文字重疊」。
+            // 邊界要用與轉換無關的 FRC 量，否則會量到旋轉後的座標。
+            val bounds = g2.font
+                .createGlyphVector(INK_FRC, text)
+                .visualBounds
+            g2.drawString(
+                text,
+                -bounds.centerX.toFloat(),
+                -bounds.centerY.toFloat(),
+            )
             g2.transform = old
         }
     }

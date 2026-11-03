@@ -70,6 +70,10 @@ class PaginationTest {
             advance < metrics.fontSize,
             "latin advance $advance should be narrower than one em ${metrics.fontSize}",
         )
+        assertTrue(
+            advance >= metrics.fontSize * 0.5f,
+            "半角字至少佔 0.5em，否則旋倒的墨跡會壓到前後的字（實測 $advance）",
+        )
         assertEquals(advance, glyphs[0].cellHeight, 0.01f)
     }
 

@@ -411,14 +411,17 @@ class PaginationEngine(
     /**
      * 直排的前進量：全角字（CJK、全角標點）固定 1em；
      * 半角字（拉丁字母、數字、半角標點）依字寬前進，避免旋倒的
-     * 拉丁字串每個字母都被撐成一個全角格子。
+     * 拉丁字串每個字母都被撐成一個全角格子（`UTF-8` 會被拉得很長）。
+     *
+     * 下限 0.5em：`1`、`i`、`.` 這類字寬只有 0.3em，旋倒後的墨跡
+     * 會比字格高，直接壓到前後的字。
      */
     private fun verticalAdvance(c: Char): Float {
         val width = charWidth(c)
         return if (width >= metrics.fontSize * 0.9f) {
             metrics.fontSize
         } else {
-            width.coerceAtLeast(metrics.fontSize * 0.3f)
+            width.coerceAtLeast(metrics.fontSize * 0.5f)
         }
     }
 
