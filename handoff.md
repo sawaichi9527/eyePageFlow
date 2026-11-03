@@ -74,11 +74,12 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - `platform/SingleInstance.kt`：檔案鎖＋loopback socket；第二次啟動把檔案送到既有視窗。
 - 關窗未儲存提示。
 - `EditorPaneTest`：程式設定文字不觸發 dirty；插入文字會觸發 dirty；find／replace／replaceAll 正常。
-- 測試：77 個測試，0 失敗（Windows 與 Ubuntu 26.04 Wayland；含 4 個書頁渲染回歸測試）。
+- 測試：81 個測試，0 失敗（Windows 與 Ubuntu 26.04 Wayland；含 4 個書頁渲染回歸測試）。
 - 直排「數字壓在字上」的修正，分兩層：
   1. `BookRenderer.drawGlyph`：直排時把**行框在字格內垂直置中**。字格高 = 字號，但字型 ascent + descent 更大（Noto Serif CJK 26px 為 38px），沿用基線會讓每個字的墨跡往下溢 6px、壓到下一個字（`第10段` 的數字就是被 `第` 壓住）。
   2. `Pagination.verticalAdvance`：旋倒的半角字維持依字寬前進（`UTF-8` 不會被拉長），但下限由 0.3em 提到 0.5em，避免 `1`、`.` 的旋倒墨跡比字格高。
   旋轉分支另外改用**墨跡邊界置中**（與畫面轉換無關的 `FontRenderContext`），不再靠基線推算。曾試過「旋倒字固定 1em」，會讓 `UTF-8` 明顯變長，已否決。
+- 材質快取：`TexturePainter` 把材質依（寬、高、底色、種類）快取成點陣圖，LRU 上限 6 M 像素（約 24 MB）。實測 20 次材質繪製由 254 ms 降到 80 ms（JIT 暖機後）。
 - 應用程式圖示：`--icon <path>` 產生 512×512 透明背景 PNG（`AppIcon` + `EmptyStateRenderer.renderIcon`，自製書頁 logo，無外部素材）。
 - AppImage：`scripts/package-appimage.sh` 把 app-image 組成 AppDir（`AppRun`＋`.desktop`＋`.png`）後用 `appimagetool` 打包，產出 `build/package/eyePageFlow-0.1.0-x86_64.AppImage`（44 MB）。
 - Linux 打包：`scripts/package-linux.sh` 依序做 `installDist` → `jlink`（java.base/java.desktop/java.logging/java.prefs）→ `jpackage --type app-image` → 產出 `.desktop`（`MimeType=text/plain`、`Exec=eyePageFlow %f`）→ `tar.gz`。app-image 不寫死 AWT toolkit，靠程式自動選擇。
@@ -243,7 +244,7 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 
 | 指令 | Exit | 結果 | 證據 |
 |---|---|---|---|
-| `./scripts/gradlew-local.sh test --rerun-tasks` | 0 | 77 tests、22 suites、0 failures、0 skipped | `build/test-results/test/` |
+| `./scripts/gradlew-local.sh test --rerun-tasks` | 0 | 81 tests、22 suites、0 failures、0 skipped | `build/test-results/test/` |
 | `./scripts/gradlew-local.sh check` | 0 | BUILD SUCCESSFUL | 終端輸出 |
 | WLToolkit 啟動 | 124（timeout） | `ui font: Noto Sans CJK TC 15pt`（修正前為 13pt／Ubuntu Sans） | `/tmp/opencode/ui-WLToolkit.log` |
 | XToolkit 啟動 | 124（timeout） | `ui font: Noto Sans CJK TC 15pt` | `/tmp/opencode/ui-XToolkit.log` |
@@ -263,6 +264,17 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 | JBR + x11 + `EYEPAGEFLOW_TOOLKIT=WLToolkit` | `toolkit=sun.awt.wl.WLToolkit` |
 
 同時確認 headless 路徑不受影響：`run --args="--benchmark"`（解碼 157.2 ms、橫排 314.8 ms／7,779 頁、直排 478.4 ms／8,420 頁）與 JBR 下 `--render` 四張 PNG 都正常。
+
+### 材質快取（2026-11-03）
+
+| 項目 | 舊 | 新 |
+|---|---|---|
+| 20 次材質繪製（暖機後） | 253.8 ms | 80.9 ms |
+| 單次材質 | ~12.7 ms | ~4.1 ms |
+
+- 快取鍵：寬、高、底色 rgb、材質種類；LRU 上限 6,000,000 像素。
+- 材質改在獨立 `BufferedImage` 上以 AA 產生；因為是先產生再縮放貼上，畫面與舊版有 ≤27/255 的像素差（材質線條略柔），目視比對無差異。
+- 新增 `TexturePainterTest`（4 個測試：決定性、快取鍵、NONE 平塗、指定位置）。
 
 ### Linux 打包（2026-11-03）
 
