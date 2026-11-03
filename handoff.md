@@ -37,6 +37,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - 顯示設定新增「下劃線粗細」（淡 0.5／普通 1.0／粗黑 1.5），搭配既有的「下劃線顏色」。
 - 修正下劃線顏色污染文字：`drawPageUnderlines` 改掉畫筆顏色後沒有還原，字就沿用下劃線色。
 - 修正直排 `UTF-8` 的連字號壓在 `8` 上：半角標點改為與拉丁字串一起旋倒，並把窄字在字格內垂直置中。
+- `RenderRegressionTest`：4 個書頁渲染回歸測試（字色不被下劃線污染、字墨符合字級、窄字不溢出、標點右上位置），刻意用像素性質而非跨平台 golden image。
 - `core/TextEncoding.kt`：BOM、UTF-8、UTF-16 LE/BE、Big5、GB18030 偵測與換行偵測。
 - `core/TextDocument.kt`、`core/DocumentIO.kt`：文件模型、開檔、存檔、原編碼／BOM 保留、無法表示字元的 fallback 結果。
 - `core/Pagination.kt`：字寬表分頁、橫排／直排、段落縮排、直排形式標點、拉丁字母旋轉。
@@ -66,7 +67,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - `platform/SingleInstance.kt`：檔案鎖＋loopback socket；第二次啟動把檔案送到既有視窗。
 - 關窗未儲存提示。
 - `EditorPaneTest`：程式設定文字不觸發 dirty；插入文字會觸發 dirty；find／replace／replaceAll 正常。
-- 測試：45 個測試，0 失敗。
+- 測試：57 個測試，0 失敗（Windows；含 4 個書頁渲染回歸測試）。
 - Benchmark：10 MiB Big5，橫排 191.4 ms、直排 342.9 ms。
 - JBR 21 原生 Wayland：`sun.awt.wl.WLToolkit`。
 - JBR 21 XToolkit：`sun.awt.X11.XToolkit`。
@@ -84,9 +85,32 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 ## Next actions
 
-1. M10：檔案關聯註冊與安裝檔（暫緩，先以 Gradle 驗證）。
-2. 在 Ubuntu 24.04 Xorg 跑一次啟動、開檔與編輯存檔驗證；Windows 補 GUI 互動驗證（拖放、IME、縮放、編輯存檔）。
-3. M3：補禁則、左右對齊、offset↔page 完整測試。
+### P0 收尾（約半天）
+
+1. Windows GUI 互動驗證：拖放、IME、125%／150% 縮放、檔案對話框、剪貼簿、編輯存檔、關窗提示。
+2. 文件同步：把舊數據（45 tests、191 ms）更新為現況，README 驗證數據比照。
+3. 定案顯示預設值（字級 26、直排標點、下劃線粗細與顏色）。
+
+### P1 排版正確性（M3，約 1–2 天）
+
+4. 禁則：句號／逗號／問號／驚嘆號不得出現在行首，開引號／開括號不得出現在行尾。
+5. 橫排左右對齊（justify）。
+6. offset↔page 對應測試（編輯 caret ↔ 閱讀頁碼）。
+7. Surrogate pair（emoji／罕用字）不被拆成兩半。
+8. 書頁渲染回歸測試（已完成：`RenderRegressionTest`，4 個像素性質測試）。
+
+### P2 打包與平台（M10，約 1–2 天）
+
+9. Windows MSI（jpackage）＋檔案關聯註冊。
+10. Linux AppImage；修掉 app-image 寫死 `-Dawt.toolkit.name=WLToolkit`。
+11. Ubuntu 24.04 原生 X11 回歸。
+
+### P3 體驗
+
+12. `AUTO`／`EQUAL_HEIGHT` 依視窗比例或固定頁寬真正區分。
+13. CURL 翻頁動畫改為實際捲頁。
+14. 內嵌 Noto Serif CJK TC（OFL），讓 Windows／Linux 字型一致。
+15. GNOME／Wayland 的托盤替代方案。
 
 ## Validation evidence
 
