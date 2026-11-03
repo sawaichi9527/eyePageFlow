@@ -107,7 +107,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 9. Windows MSI（jpackage）＋檔案關聯註冊。
 10. Linux AppImage；修掉 app-image 寫死 `-Dawt.toolkit.name=WLToolkit`。
-11. Ubuntu 24.04 原生 X11 回歸。
+11. Ubuntu 24.04 原生 X11 回歸（清單見 `docs/linux-regression.md`，由另一台 Ubuntu 機器執行）。
 
 ### P3 體驗
 
