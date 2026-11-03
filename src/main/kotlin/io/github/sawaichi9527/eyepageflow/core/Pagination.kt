@@ -37,6 +37,17 @@ private fun isNoLineStart(c: Char): Boolean = NO_LINE_START_TABLE[c.code]
 
 private fun isNoLineEnd(c: Char): Boolean = NO_LINE_END_TABLE[c.code]
 
+/** 只有「下一個字是行首禁則」或「本字是行尾禁則」時才需要做禁則前瞻。 */
+private fun isPunctuationCandidate(
+    current: Char,
+    next: Char?,
+    limitEnd: Int,
+    index: Int,
+): Boolean {
+    if (index + 1 >= limitEnd || next == null) return false
+    return isNoLineStart(next) || isNoLineEnd(current)
+}
+
 /** 直排時 CJK 標點（。、，：；）在字格內的位置。 */
 enum class VerticalPunctuation(val label: String) {
     CENTER("置中"),
@@ -201,10 +212,9 @@ class PaginationEngine(
             }
 
             val width = charWidth(c)
-            // 禁則：若下一個字是行首禁則字、或本字是行尾禁則字，寧可提早換行。
-            // 只有接近行尾時才需要檢查，避免每字都多一次前瞻成本。
+            // 禁則：只在「下一個字是行首禁則字」或「本字是行尾禁則字」時才做完整前瞻。
             if (lineHasContent &&
-                x - metrics.marginLeft + width + metrics.fontSize * 3f > metrics.contentWidth &&
+                isPunctuationCandidate(c, text.getOrNull(index + 1), limitEnd, index) &&
                 shouldBreakBeforeHorizontal(text, index, limitEnd, x, width)
             ) {
                 line += 1
@@ -279,7 +289,7 @@ class PaginationEngine(
             val advance = verticalAdvance(c)
             // 禁則：欄底換欄前，先確認下一個字不會變成欄首禁則字。
             if (cursor > 0f &&
-                cursor + advance + metrics.fontSize * 3f > columnHeight &&
+                isPunctuationCandidate(c, text.getOrNull(index + 1), limitEnd, index) &&
                 shouldBreakBeforeVertical(text, index, limitEnd, cursor, advance, columnHeight)
             ) {
                 column += 1

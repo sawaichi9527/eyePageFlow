@@ -117,7 +117,9 @@ class PaginationTest {
     @Test
     fun `kinsoku keeps closing punctuation off line and column starts`() {
         val source = buildString {
-            repeat(120) { append("測試文字，段落內容。還有（引號）與「書名」！") }
+            repeat(120) {
+                append("測試文字，段落內容。還有（引號）與「書名」！全形標點：，。！？：；「」『』《》（）。")
+            }
         }
         WritingMode.entries.forEach { mode ->
             val engine = PaginationEngine(source, metrics, mode, font)
