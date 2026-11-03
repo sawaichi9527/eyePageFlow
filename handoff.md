@@ -81,7 +81,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 - Ubuntu 24.04 原生 X11 驗證尚未執行。
 - Windows GUI 互動驗證（拖放、IME、125%／150% 縮放、檔案對話框、編輯存檔）尚未執行；建置、測試、渲染、benchmark、啟動、托盤與單一實例已完成。
-- 直排標點與左右對齊仍是原型等級（禁則已完成）。
+- 直排標點位置（部分字型缺直排形式）、標點擠壓、頁面底部孤行控制仍未完成。
 - 尚未做 golden image 基準與字型子集。
 - 目前環境的 GNOME／Wayland 不支援 `SystemTray`，老闆鍵會退回最小化；托盤在有支援的桌面才會安裝。
 - `AUTO`／`EQUAL_HEIGHT` 目前都當成雙頁；尚未依視窗比例或固定頁寬做真正區分。
@@ -99,7 +99,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 4. ~~禁則~~（已完成：關閉標點不落行首／欄首、開括號不落行尾／欄尾，連續標點整段帶走）。
 5. ~~左右對齊~~（已完成：橫排 justify，段末行與過鬆的行不拉齊，可在顯示設定關閉）。
-6. offset↔page 對應測試（編輯 caret ↔ 閱讀頁碼）。
+6. ~~offset↔page 對應~~（已完成：`Pagination.pageIndexFor`，二分搜尋＋邊界夾取，含測試）。
 7. ~~Surrogate pair~~（已完成：emoji 視為單一字、佔一格、頁面邊界不切半；缺字時退回系統 emoji 字型）。
 8. 書頁渲染回歸測試（已完成：`RenderRegressionTest`，4 個像素性質測試）。
 
@@ -229,4 +229,4 @@ JBR 下載與 checksum：
 
 ## M0 判定
 
-**Go。** 分頁速度、直排／橫排渲染、JBR 原生 Wayland、app-image 啟動都已在目前環境驗證。Windows 端已補上建置、測試、渲染、benchmark、GUI 啟動與單一實例；最大風險仍是直排標點與禁則的精確度，以及尚未驗證的 Ubuntu 24.04 X11 與 Windows GUI 互動（拖放／IME／縮放／編輯存檔），列入 M1／M3 的必檢項目。
+**Go。** 分頁速度、直排／橫排渲染、JBR 原生 Wayland、app-image 啟動都已在目前環境驗證。Windows 端已補上建置、測試、渲染、benchmark、GUI 啟動與單一實例；禁則、左右對齊、offset↔page、surrogate pair 已完成。最大風險改為：排版改動尚未在 Linux 回歸、Windows GUI 互動（拖放／IME／縮放／編輯存檔）未驗證、Ubuntu 24.04 X11 未驗證。
