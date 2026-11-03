@@ -137,7 +137,7 @@ Windows（2026-11-02）：
 - Runtime：Temurin `21.0.12+8`（Eclipse Adoptium）
 - Build runtime：Gradle `9.5.0`、Kotlin `2.4.10`、`JAVA_HOME=.local\jdk-21`、`GRADLE_USER_HOME=.local\gradle-home`
 - Toolkit：`sun.awt.windows.WToolkit`
-- 專案路徑：`D:\workspace\eyePageFlow`（`core.autocrlf=false`，repo 無 `.gitattributes`）
+- 專案路徑：`D:\workspace\eyePageFlow`（`core.autocrlf=false`；行尾由 `.gitattributes` 統一）
 
 ### Linux session close（2026-11-01 21:34 CST）
 
@@ -161,6 +161,25 @@ Windows（2026-11-02）：
 | 第二個實例開 Big5 檔 | 0 | 3s | secondary 立即結束；primary log 出現 `opened ... encoding=Big5 chars=94 pages=1` | `%TEMP%\opencode\gui-run.log` |
 
 Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146 bytes，Big5／CP950、CRLF）。
+
+### Windows session close（2026-11-03 17:43 CST）
+
+環境：Windows 10 IoT 企業版 LTSC 21H2 x64（`10.0.19044`）、Temurin `21.0.12+8`、Gradle `9.5.0`、`sun.awt.windows.WToolkit`。
+
+| 指令 | Exit | Duration | 結果 | 證據 |
+|---|---|---|---|---|
+| `.\scripts\gradlew-local.ps1 test --rerun-tasks` | 0 | 16.8s | **67 tests, 0 failures, 0 errors, 0 skipped**（20 suites） | `%TEMP%\opencode\session-close-test.log`、`build\test-results\test\` |
+| `.\scripts\gradlew-local.ps1 check` | 0 | 2.3s | BUILD SUCCESSFUL | 終端輸出 |
+| `.\scripts\gradlew-local.ps1 run --args="--render build/prototype"` | 0 | 3.8s | 橫排 10 頁、直排 11 頁、3,761 字；underline 版本同時產出 | `build\prototype\*.png` |
+| `.\scripts\gradlew-local.ps1 run --args="--benchmark"` | 0 | 3.2s | 10 MiB、5,934,667 字、解碼 113.2 ms、橫排 336.1 ms／7,613 頁、直排 381.4 ms／8,193 頁 | `%TEMP%\opencode\session-close-benchmark.log` |
+
+本次分頁變慢（228 → 336 ms）是禁則前瞻、左右對齊與 surrogate pair 的固定成本，仍遠低於 1 秒門檻；surrogate 支援一開始讓每個字都做 `substring`，已改成只在需要時才配置。
+
+尚未驗證（本次）：
+
+- Windows GUI 互動：拖放、IME、125%／150% 縮放、檔案對話框、剪貼簿、編輯後存檔、關窗提示。
+- Linux（X11／Wayland）完整回歸：交由另一台 Ubuntu 機器，清單見 `docs/linux-regression.md`。
+- 打包（MSI／AppImage）與檔案關聯註冊。
 
 ### Linux 先前累積驗證
 

@@ -249,8 +249,7 @@ class PaginationEngine(
             }
 
             val pairLength = surrogatePairLength(text, index, limitEnd)
-            val glyphText = text.substring(index, index + pairLength)
-            val width = glyphWidth(glyphText, c)
+            val width = if (pairLength == 1) charWidth(c) else pairWidth(text.substring(index, index + 2))
             // 禁則：只在「下一個字是行首禁則字」或「本字是行尾禁則字」時才做完整前瞻。
             if (lineHasContent &&
                 isPunctuationCandidate(c, text.getOrNull(index + pairLength), limitEnd, index) &&
@@ -284,7 +283,11 @@ class PaginationEngine(
                         cellWidth = width,
                         cellHeight = lineHeight,
                         underline = metrics.underline,
-                        text = glyphText,
+                        text = if (pairLength == 1) {
+                            c.toString()
+                        } else {
+                            text.substring(index, index + 2)
+                        },
                     ),
                 )
             }
@@ -356,7 +359,6 @@ class PaginationEngine(
             }
 
             val pairLength = surrogatePairLength(text, index, limitEnd)
-            val glyphText = text.substring(index, index + pairLength)
             val style = verticalStyle(c)
             val advance = if (pairLength > 1) metrics.fontSize else verticalAdvance(c)
             // 禁則：欄底換欄前，先確認下一個字不會變成欄首禁則字。
@@ -379,19 +381,26 @@ class PaginationEngine(
             val x = right - (column + 1) * columnPitch +
                 (columnPitch - metrics.fontSize) / 2f
             val y = metrics.marginTop + cursor
-            glyphs?.add(
-                PlacedGlyph(
-                    char = c,
-                    x = x + style.xOffset,
-                    y = y + style.yOffset,
-                    cellWidth = metrics.fontSize,
-                    cellHeight = advance,
-                    rotationDegrees = style.rotationDegrees,
-                    underline = metrics.underline,
-                    text = glyphText,
-                    drawText = style.drawChar?.toString() ?: glyphText,
-                ),
-            )
+            if (glyphs != null) {
+                val glyphText = if (pairLength == 1) {
+                    c.toString()
+                } else {
+                    text.substring(index, index + 2)
+                }
+                glyphs.add(
+                    PlacedGlyph(
+                        char = c,
+                        x = x + style.xOffset,
+                        y = y + style.yOffset,
+                        cellWidth = metrics.fontSize,
+                        cellHeight = advance,
+                        rotationDegrees = style.rotationDegrees,
+                        underline = metrics.underline,
+                        text = glyphText,
+                        drawText = style.drawChar?.toString() ?: glyphText,
+                    ),
+                )
+            }
             index += pairLength
             cursor += advance
         }
@@ -420,10 +429,7 @@ class PaginationEngine(
         return if (Character.isLowSurrogate(text[index + 1])) 2 else 1
     }
 
-    /** 單一字元的寬度；surrogate pair 用字型量測整個字串。 */
-    private fun glyphWidth(glyphText: String, c: Char): Float =
-        if (glyphText.length == 1) charWidth(c) else pairWidth(glyphText)
-
+    /** surrogate pair 用字型量測整個字串；單一字元走 [charWidth] 快取。 */
     private fun pairWidth(glyphText: String): Float = pairWidthCache.getOrPut(glyphText) {
         font.getStringBounds(glyphText, fontRenderContext).width.toFloat().coerceAtLeast(0f)
     }
