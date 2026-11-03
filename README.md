@@ -128,7 +128,8 @@ Linux（Ubuntu 26.04.1 LTS x86_64、Wayland、JBR 21.0.11）：
   - 直排：8,323 頁、447.4 ms
 - 原生 Wayland：`toolkit=sun.awt.wl.WLToolkit`
 - XWayland 路徑：`toolkit=sun.awt.X11.XToolkit`
-- 測試：`./scripts/gradlew-local.sh test` 通過（67 tests，0 failures）
+- 測試：`./scripts/gradlew-local.sh test` 通過（71 tests，0 failures）
+- UI 文字：`Noto Sans CJK TC 15pt`（JBR Wayland 原本只算出 13pt）
 - 排版：`startup typography: fontSize=26.0 font=Noto Serif CJK TC/26`、20 欄／頁
 
 Windows（Windows 10 x64、Temurin 21.0.12+8、Gradle 9.5.0）：

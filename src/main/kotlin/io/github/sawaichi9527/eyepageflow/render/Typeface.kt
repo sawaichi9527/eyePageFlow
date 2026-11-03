@@ -23,15 +23,35 @@ object Typeface {
         "Microsoft JhengHei",
     )
 
+    /** UI 用的 sans CJK 家族；只列免費、跨平台安裝率高又不改變 Windows 預設外觀的字型。 */
+    private val UI_FAMILIES = listOf(
+        "Noto Sans CJK TC",
+        "Noto Sans TC",
+    )
+
     fun resolveFamily(preferred: String = DEFAULT_FAMILY): String {
-        val families = GraphicsEnvironment.getLocalGraphicsEnvironment()
-            .availableFontFamilyNames
-            .toSet()
+        val families = availableFamilies()
         if (preferred in families) {
             return preferred
         }
         return FALLBACK_FAMILIES.firstOrNull { it in families } ?: Font.SERIF
     }
+
+    /**
+     * UI（選單、工具列、狀態列）文字用的字型家族。
+     *
+     * 系統字型若無法顯示中文，15px 的中文會落到不合適的 fallback，看起來又硬又擠；
+     * 這裡在允許範圍內改用 CJK sans 家族。只列免費且跨平台安裝率高的字型，
+     * 找不到就回傳 null，沿用系統預設（例如 Windows 的 Segoe UI）。
+     *
+     * 注意：不能改用 `Font(name).canDisplay('檔')` 判斷系統字型，因為 Java 會把未知
+     * 家族對應到 Dialog，而 Dialog 的複合字型永遠回報可顯示中文。
+     */
+    fun resolveUiFamily(): String? = UI_FAMILIES.firstOrNull { it in availableFamilies() }
+
+    private fun availableFamilies(): Set<String> = GraphicsEnvironment.getLocalGraphicsEnvironment()
+        .availableFontFamilyNames
+        .toSet()
 
     fun pageFont(metrics: PageMetrics, family: String = DEFAULT_FAMILY): Font = Font(
         resolveFamily(family),

@@ -74,7 +74,12 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - `platform/SingleInstance.kt`：檔案鎖＋loopback socket；第二次啟動把檔案送到既有視窗。
 - 關窗未儲存提示。
 - `EditorPaneTest`：程式設定文字不觸發 dirty；插入文字會觸發 dirty；find／replace／replaceAll 正常。
-- 測試：67 個測試，0 失敗（Windows 與 Ubuntu 26.04 Wayland；含 4 個書頁渲染回歸測試）。
+- 測試：71 個測試，0 失敗（Windows 與 Ubuntu 26.04 Wayland；含 4 個書頁渲染回歸測試）。
+- 直排「數字壓在字上」的修正，分兩層：
+  1. `BookRenderer.drawGlyph`：直排時把**行框在字格內垂直置中**。字格高 = 字號，但字型 ascent + descent 更大（Noto Serif CJK 26px 為 38px），沿用基線會讓每個字的墨跡往下溢 6px、壓到下一個字（`第10段` 的數字就是被 `第` 壓住）。
+  2. `Pagination.verticalAdvance`：旋倒的半角字維持依字寬前進（`UTF-8` 不會被拉長），但下限由 0.3em 提到 0.5em，避免 `1`、`.` 的旋倒墨跡比字格高。
+  旋轉分支另外改用**墨跡邊界置中**（與畫面轉換無關的 `FontRenderContext`），不再靠基線推算。曾試過「旋倒字固定 1em」，會讓 `UTF-8` 明顯變長，已否決。
+- UI 文字：FlatLaf 依系統挑 sans CJK（`Noto Sans CJK TC`／`Noto Sans TC`，`Typeface.resolveUiFamily`），UI 字級下限 15pt；JBR 的 Wayland toolkit 原本只算出 13pt，中文又硬又擠，是「閱讀區以外字看起來很舊」的主因。啟動 log 會印 `ui font: <家族> <級數>`。
 - Benchmark（Windows）：10 MiB Big5，橫排 336.1 ms、直排 381.4 ms；Ubuntu 26.04 Wayland：解碼 130.2 ms、橫排 300.7 ms、直排 447.4 ms。
 - JBR 21 原生 Wayland：`sun.awt.wl.WLToolkit`。
 - JBR 21 XToolkit：`sun.awt.X11.XToolkit`。
@@ -217,6 +222,30 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 | 下劃線粗細 | 藍線＋深色字，寬 0.5／1.0／1.5 | 三個等級目視可分辨（0.5 較淡、1.5 較粗） |
 | 下劃線顏色 | 藍線、字色 `#112233` | 文字像素數在三個寬度下都是 2,358 → 顏色不污染文字 |
 
+### UI 文字可讀性（2026-11-03）
+
+問題回報：「閱讀區以外的文字不圓潤，像 20 年前的顯示」。
+
+量測結論：
+
+- Swing 預設就有反鋸齒；`-Dawt.useSystemAAFontSettings=on/lcd/gasp` 對 FlatLaf 版面的截圖 **md5 完全相同**，不是反鋸齒的問題。
+- 真正原因有兩個：UI 中文落到不合適的 fallback，且 JBR 的 Wayland toolkit 只算出 **13pt**（XToolkit 是 15pt）。
+
+修正（`ReaderWindow`、`Typeface`）：
+
+- `Typeface.resolveUiFamily()`：有 `Noto Sans CJK TC`／`Noto Sans TC` 就當 UI 家族，否則回傳 null 沿用系統預設。
+- `ReaderWindow.enforceMinimumUiFontSize()`：UI 字級下限 15pt，只上調不下調（HiDPI 仍用 FlatLaf 算出的較大值）。
+- 啟動 log 增加 `ui font: <家族> <級數>`。
+
+| 指令 | Exit | 結果 | 證據 |
+|---|---|---|---|
+| `./scripts/gradlew-local.sh test --rerun-tasks` | 0 | 71 tests、21 suites、0 failures、0 skipped | `build/test-results/test/` |
+| `./scripts/gradlew-local.sh check` | 0 | BUILD SUCCESSFUL | 終端輸出 |
+| WLToolkit 啟動 | 124（timeout） | `ui font: Noto Sans CJK TC 15pt`（修正前為 13pt／Ubuntu Sans） | `/tmp/opencode/ui-WLToolkit.log` |
+| XToolkit 啟動 | 124（timeout） | `ui font: Noto Sans CJK TC 15pt` | `/tmp/opencode/ui-XToolkit.log` |
+
+截圖對照（XWayland、工具列 3 倍放大）：修正前 `/tmp/opencode/aa-crop-test.png`、修正後 `/tmp/opencode/ui-after-noto15.png`。
+
 ### Linux 先前累積驗證
 
 | 指令 | Exit | 結果 | 證據 |
@@ -264,6 +293,9 @@ JBR 下載與 checksum：
 - 編輯器 10 MiB 的輸入延遲（M7）。
 
 ## Known issues
+
+- UI 中文只在有 Noto Sans CJK／Noto Sans TC 的機器上變好（Linux）。Windows 上 `resolveUiFamily()` 回傳 null，選單／工具列的中文仍走 Segoe UI 的 fallback；要跨平台一致得等 P3 內嵌字型。
+- 這台 JVM 的 Swing 已經是反鋸齒（`awt.useSystemAAFontSettings=on` 由程式設定），`lcd`／`gasp` 對 FlatLaf 版面量測不出可見差異；「字很舊」的感覺來自字級與 hinting，不是沒有反鋸齒。
 
 - emoji 只在 JBR 21 有墨跡。Linux 的 Noto Color Emoji 是點陣（CBDT）字型，Temurin 21 的 Java2D 完全畫不出來（實測 0 墨跡像素），字格與分頁仍正確、畫面會留空白；Windows 的 Segoe UI Emoji 是向量字型不受影響。正式 Linux runtime 用 JBR，所以目前可接受，但用 Temurin 跑 Linux 版會看不到 emoji。
 

@@ -69,10 +69,15 @@ import javax.swing.SwingUtilities
 import javax.swing.Timer
 import javax.swing.TransferHandler
 import javax.swing.UIManager
+import javax.swing.plaf.FontUIResource
 import javax.swing.filechooser.FileNameExtensionFilter
+import com.formdev.flatlaf.FlatLaf
 import com.formdev.flatlaf.FlatLightLaf
 
 object ReaderWindow {
+    /** UI 字級下限；FlatLaf 在部分平台會算出更小的值（JBR Wayland 為 13pt）。 */
+    private const val MIN_UI_FONT_SIZE = 15
+
     private var activePanel: ReaderPanel? = null
     private val pendingPaths = mutableListOf<Path>()
 
@@ -90,7 +95,9 @@ object ReaderWindow {
     ) {
         System.setProperty("awt.useSystemAAFontSettings", "on")
         try {
+            Typeface.resolveUiFamily()?.let { FlatLaf.setPreferredFontFamily(it) }
             FlatLightLaf.setup()
+            enforceMinimumUiFontSize()
         } catch (_: Exception) {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
         }
@@ -162,6 +169,22 @@ object ReaderWindow {
         }
     }
 
+    /**
+     * UI 字級下限。
+     *
+     * JBR 的 Wayland toolkit 回報的 DPI 讓 FlatLaf 只算出 13pt，中文在 13px 會又硬又擠；
+     * 這裡只往上調、不往下調，HiDPI 環境仍沿用 FlatLaf 自己算出的較大值。
+     */
+    private fun enforceMinimumUiFontSize() {
+        val base = UIManager.getFont("defaultFont") ?: return
+        if (base.size >= MIN_UI_FONT_SIZE) return
+        UIManager.put(
+            "defaultFont",
+            FontUIResource(base.family, base.style, MIN_UI_FONT_SIZE),
+        )
+        FlatLightLaf.setup()
+    }
+
     private fun printStartupDiagnostics() {
         println("eyePageFlow")
         println("session=${System.getenv("XDG_SESSION_TYPE") ?: "unknown"}")
@@ -170,6 +193,7 @@ object ReaderWindow {
                 "(${System.getProperty("java.vendor")})",
         )
         println("toolkit=${Toolkit.getDefaultToolkit().javaClass.name}")
+        UIManager.getFont("defaultFont")?.let { println("ui font: ${it.family} ${it.size}pt") }
     }
 }
 
