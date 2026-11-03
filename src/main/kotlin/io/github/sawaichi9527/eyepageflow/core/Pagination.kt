@@ -98,6 +98,28 @@ data class Pagination(
         get() = pages.size
 
     fun page(index: Int): PageSpan = pages[index.coerceIn(0, pages.lastIndex)]
+
+    /**
+     * 把文字 offset（例如編輯器游標位置）對應到頁碼。
+     * 邊界規則：offset 屬於 `startOffset <= offset < endOffset` 的那一頁；
+     * 超出範圍時夾到第一頁或最後一頁。
+     */
+    fun pageIndexFor(offset: Int): Int {
+        if (pages.isEmpty()) return 0
+        if (offset <= pages.first().startOffset) return 0
+        var low = 0
+        var high = pages.lastIndex
+        while (low <= high) {
+            val mid = (low + high) ushr 1
+            val page = pages[mid]
+            when {
+                offset < page.startOffset -> high = mid - 1
+                offset >= page.endOffset -> low = mid + 1
+                else -> return mid
+            }
+        }
+        return pages.lastIndex
+    }
 }
 
 data class PlacedGlyph(
@@ -108,7 +130,10 @@ data class PlacedGlyph(
     val cellHeight: Float,
     val rotationDegrees: Float = 0f,
     val underline: Boolean = false,
-    val drawChar: Char = char,
+    /** 實際要繪製的字串；surrogate pair（emoji）會是兩個 Char。 */
+    val text: String = char.toString(),
+    /** 實際送進 drawString 的文字，可能被替換成直排形式。 */
+    val drawText: String = text,
 )
 
 data class PageContent(
@@ -141,6 +166,7 @@ class PaginationEngine(
     }
 
     private val widthCache = HashMap<Char, Float>()
+    private val pairWidthCache = HashMap<String, Float>()
     private val punctuationCache = HashMap<Char, VerticalStyle>()
     private val fontRenderContext = probeGraphics.fontRenderContext
 
@@ -222,10 +248,12 @@ class PaginationEngine(
                 indentNextLine = false
             }
 
-            val width = charWidth(c)
+            val pairLength = surrogatePairLength(text, index, limitEnd)
+            val glyphText = text.substring(index, index + pairLength)
+            val width = glyphWidth(glyphText, c)
             // 禁則：只在「下一個字是行首禁則字」或「本字是行尾禁則字」時才做完整前瞻。
             if (lineHasContent &&
-                isPunctuationCandidate(c, text.getOrNull(index + 1), limitEnd, index) &&
+                isPunctuationCandidate(c, text.getOrNull(index + pairLength), limitEnd, index) &&
                 shouldBreakBeforeHorizontal(text, index, limitEnd, x, width)
             ) {
                 flushLine(justify = true)
@@ -256,11 +284,12 @@ class PaginationEngine(
                         cellWidth = width,
                         cellHeight = lineHeight,
                         underline = metrics.underline,
+                        text = glyphText,
                     ),
                 )
             }
             x += width
-            index += 1
+            index += pairLength
             lineHasContent = true
         }
 
@@ -326,11 +355,13 @@ class PaginationEngine(
                 indentNextColumn = false
             }
 
+            val pairLength = surrogatePairLength(text, index, limitEnd)
+            val glyphText = text.substring(index, index + pairLength)
             val style = verticalStyle(c)
-            val advance = verticalAdvance(c)
+            val advance = if (pairLength > 1) metrics.fontSize else verticalAdvance(c)
             // 禁則：欄底換欄前，先確認下一個字不會變成欄首禁則字。
             if (cursor > 0f &&
-                isPunctuationCandidate(c, text.getOrNull(index + 1), limitEnd, index) &&
+                isPunctuationCandidate(c, text.getOrNull(index + pairLength), limitEnd, index) &&
                 shouldBreakBeforeVertical(text, index, limitEnd, cursor, advance, columnHeight)
             ) {
                 column += 1
@@ -357,10 +388,11 @@ class PaginationEngine(
                     cellHeight = advance,
                     rotationDegrees = style.rotationDegrees,
                     underline = metrics.underline,
-                    drawChar = style.drawChar ?: c,
+                    text = glyphText,
+                    drawText = style.drawChar?.toString() ?: glyphText,
                 ),
             )
-            index += 1
+            index += pairLength
             cursor += advance
         }
 
@@ -379,6 +411,21 @@ class PaginationEngine(
         } else {
             width.coerceAtLeast(metrics.fontSize * 0.3f)
         }
+    }
+
+    /** 回傳 1 或 2：index 是高位代理且下一個是低位代理時回傳 2（emoji 等）。 */
+    private fun surrogatePairLength(text: String, index: Int, limitEnd: Int): Int {
+        if (!Character.isHighSurrogate(text[index])) return 1
+        if (index + 1 >= limitEnd) return 1
+        return if (Character.isLowSurrogate(text[index + 1])) 2 else 1
+    }
+
+    /** 單一字元的寬度；surrogate pair 用字型量測整個字串。 */
+    private fun glyphWidth(glyphText: String, c: Char): Float =
+        if (glyphText.length == 1) charWidth(c) else pairWidth(glyphText)
+
+    private fun pairWidth(glyphText: String): Float = pairWidthCache.getOrPut(glyphText) {
+        font.getStringBounds(glyphText, fontRenderContext).width.toFloat().coerceAtLeast(0f)
     }
 
     /**

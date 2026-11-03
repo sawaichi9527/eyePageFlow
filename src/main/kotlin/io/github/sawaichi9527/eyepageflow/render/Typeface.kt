@@ -38,4 +38,30 @@ object Typeface {
         if (metrics.bold) Font.BOLD else Font.PLAIN,
         metrics.fontSize.toInt(),
     )
+
+    /**
+     * 頁面字型缺少某個字（例如 emoji）時，找一個能顯示它的系統字型。
+     * 找不到就回傳 null，由呼叫端沿用原本的字型。
+     */
+    private val symbolCache = HashMap<Long, Font?>()
+
+    private val SYMBOL_FAMILIES = listOf(
+        "Segoe UI Emoji",
+        "Segoe UI Symbol",
+        "Noto Color Emoji",
+        "Noto Emoji",
+        "Apple Color Emoji",
+    )
+
+    fun symbolFont(codePoint: Int, size: Int): Font? {
+        val key = (codePoint.toLong() shl 32) or (size.toLong() and 0xFFFFFFFFL)
+        return symbolCache.getOrPut(key) {
+            val families = GraphicsEnvironment.getLocalGraphicsEnvironment()
+                .availableFontFamilyNames
+                .toSet()
+            SYMBOL_FAMILIES.firstOrNull { it in families }
+                ?.let { Font(it, Font.PLAIN, size) }
+                ?.takeIf { it.canDisplay(codePoint) }
+        }
+    }
 }

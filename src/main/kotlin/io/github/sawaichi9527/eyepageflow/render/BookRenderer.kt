@@ -359,7 +359,7 @@ object BookRenderer {
         glyph: PlacedGlyph,
         metrics: FontMetrics,
     ) {
-        val text = glyph.drawChar.toString()
+        val text = glyph.drawText
         // 窄字（半角標點等）若沿用基線，墨跡會溢到下一格；把 em 框在字格內置中。
         val baseline = if (glyph.rotationDegrees == 0f && glyph.cellHeight < glyph.cellWidth) {
             glyph.y + glyph.cellHeight / 2f + (metrics.ascent - metrics.descent) / 2f
@@ -367,7 +367,25 @@ object BookRenderer {
             glyph.y + metrics.ascent
         }
         if (glyph.rotationDegrees == 0f) {
-            g2.drawString(text, glyph.x, baseline)
+            val baseFont = g2.font
+            val fallback = if (baseFont.canDisplayUpTo(text) >= 0) {
+                Typeface.symbolFont(text.codePointAt(0), baseFont.size)
+            } else {
+                null
+            }
+            if (fallback != null) {
+                // emoji 等頁面字型沒有的字：換字型並在字格內置中。
+                val fallbackMetrics = g2.getFontMetrics(fallback)
+                g2.font = fallback
+                val fx = glyph.x + (glyph.cellWidth - fallbackMetrics.stringWidth(text)) / 2f
+                val fy = glyph.y +
+                    (glyph.cellHeight - fallbackMetrics.height) / 2f +
+                    fallbackMetrics.ascent
+                g2.drawString(text, fx, fy)
+                g2.font = baseFont
+            } else {
+                g2.drawString(text, glyph.x, baseline)
+            }
         } else {
             val old = g2.transform
             g2.translate(

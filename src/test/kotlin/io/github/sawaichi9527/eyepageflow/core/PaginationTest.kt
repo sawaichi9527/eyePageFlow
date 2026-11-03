@@ -200,6 +200,86 @@ class PaginationTest {
         assertTrue(last.x + last.cellWidth < metrics.marginLeft + metrics.contentWidth - 1f)
     }
 
+    @Test
+    fun `every offset maps to the page that contains it`() {
+        WritingMode.entries.forEach { mode ->
+            val pagination = PaginationEngine(text, metrics, mode, font).paginate()
+            pagination.pages.forEachIndexed { index, page ->
+                assertEquals(index, pagination.pageIndexFor(page.startOffset))
+                assertEquals(index, pagination.pageIndexFor(page.endOffset - 1))
+            }
+            var offset = 0
+            while (offset < text.length) {
+                val index = pagination.pageIndexFor(offset)
+                val page = pagination.pages[index]
+                assertTrue(
+                    offset >= page.startOffset && offset < page.endOffset,
+                    "${mode.name} offset $offset 落在 p$index (${page.startOffset}..${page.endOffset}) 之外",
+                )
+                offset += 37
+            }
+        }
+    }
+
+    @Test
+    fun `page lookup clamps out of range offsets`() {
+        val pagination = PaginationEngine(text, metrics, WritingMode.HORIZONTAL, font).paginate()
+        assertEquals(0, pagination.pageIndexFor(-10))
+        assertEquals(pagination.pageCount - 1, pagination.pageIndexFor(text.length + 10))
+    }
+
+    @Test
+    fun `empty text still resolves to page zero`() {
+        val pagination = PaginationEngine("", metrics, WritingMode.VERTICAL, font).paginate()
+        assertEquals(1, pagination.pageCount)
+        assertEquals(0, pagination.pageIndexFor(0))
+    }
+
+    @Test
+    fun `surrogate pairs are treated as a single glyph`() {
+        val source = "檔\uD83D\uDE00檔"
+        WritingMode.entries.forEach { mode ->
+            val engine = PaginationEngine(source, metrics, mode, font)
+            val pagination = engine.paginate()
+            val glyphs = engine.compose(pagination.page(0)).glyphs
+            assertTrue(
+                glyphs.size == 3,
+                "${mode.name} 應把 emoji 視為單一字，實際 ${glyphs.size} 個",
+            )
+            assertEquals("\uD83D\uDE00", glyphs[1].text)
+            assertEquals("\uD83D\uDE00", glyphs[1].drawText)
+        }
+    }
+
+    @Test
+    fun `vertical surrogate pair advances one em`() {
+        val glyphs = verticalGlyphs("檔\uD83D\uDE00檔")
+        assertEquals(metrics.fontSize, glyphs[1].cellHeight, 0.01f)
+        assertEquals(metrics.fontSize, glyphs[2].y - glyphs[1].y, 0.01f)
+    }
+
+    @Test
+    fun `page boundaries never split a surrogate pair`() {
+        val source = buildString { repeat(300) { append("檔\uD83D\uDE00") } }
+        WritingMode.entries.forEach { mode ->
+            val pagination = PaginationEngine(source, metrics, mode, font).paginate()
+            pagination.pages.forEach { page ->
+                if (page.startOffset < source.length) {
+                    assertTrue(
+                        !Character.isLowSurrogate(source[page.startOffset]),
+                        "${mode.name} p${page.index} 起點落在代理對中間",
+                    )
+                }
+                if (page.endOffset in 1..source.length) {
+                    assertTrue(
+                        !Character.isHighSurrogate(source[page.endOffset - 1]),
+                        "${mode.name} p${page.index} 終點落在代理對中間",
+                    )
+                }
+            }
+        }
+    }
+
     private fun verticalGlyphs(source: String): List<PlacedGlyph> {
         val engine = PaginationEngine(source, metrics, WritingMode.VERTICAL, font)
         val pagination = engine.paginate()

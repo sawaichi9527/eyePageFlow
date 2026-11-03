@@ -411,7 +411,7 @@ private class ReaderPanel(
         spreadStart = if (anchor == null) {
             0
         } else {
-            pagination.pages.indexOfFirst { anchorOffset < it.endOffset }.coerceAtLeast(0)
+            pagination.pageIndexFor(anchorOffset)
         }
         if (doublePage) {
             spreadStart -= spreadStart % 2
