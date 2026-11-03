@@ -374,15 +374,42 @@ object BookRenderer {
                 null
             }
             if (fallback != null) {
-                // emoji 等頁面字型沒有的字：換字型並在字格內置中。
-                val fallbackMetrics = g2.getFontMetrics(fallback)
-                g2.font = fallback
-                val fx = glyph.x + (glyph.cellWidth - fallbackMetrics.stringWidth(text)) / 2f
-                val fy = glyph.y +
-                    (glyph.cellHeight - fallbackMetrics.height) / 2f +
-                    fallbackMetrics.ascent
-                g2.drawString(text, fx, fy)
-                g2.font = baseFont
+                // emoji 等頁面字型沒有的字：換字型，用墨跡邊界縮放並置中，
+                // 避免字面高度超過 1em 格子而和上下字重疊。
+                val frc = g2.fontRenderContext
+                var symbol = fallback
+                var bounds = symbol.createGlyphVector(frc, text).visualBounds
+                val maxWidth = glyph.cellWidth * 0.92
+                val maxHeight = glyph.cellHeight * 0.92
+                if (!bounds.isEmpty) {
+                    if (bounds.width > maxWidth || bounds.height > maxHeight) {
+                        val ratio = minOf(
+                            (maxWidth / bounds.width).toFloat(),
+                            (maxHeight / bounds.height).toFloat(),
+                            1f,
+                        )
+                        symbol = fallback.deriveFont(fallback.size * ratio)
+                        bounds = symbol.createGlyphVector(frc, text).visualBounds
+                    }
+                    g2.font = symbol
+                    val inkX = glyph.x + ((glyph.cellWidth - bounds.width) / 2f).toFloat()
+                    val inkY = glyph.y + ((glyph.cellHeight - bounds.height) / 2f).toFloat()
+                    g2.drawString(
+                        text,
+                        inkX - bounds.minX.toFloat(),
+                        inkY - bounds.minY.toFloat(),
+                    )
+                    g2.font = baseFont
+                } else {
+                    val fm = g2.getFontMetrics(fallback)
+                    g2.font = fallback
+                    g2.drawString(
+                        text,
+                        glyph.x + (glyph.cellWidth - fm.stringWidth(text)) / 2f,
+                        glyph.y + (glyph.cellHeight - fm.height) / 2f + fm.ascent,
+                    )
+                    g2.font = baseFont
+                }
             } else {
                 g2.drawString(text, glyph.x, baseline)
             }
