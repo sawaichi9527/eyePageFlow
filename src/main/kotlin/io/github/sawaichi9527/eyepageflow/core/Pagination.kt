@@ -12,6 +12,12 @@ enum class WritingMode {
     VERTICAL,
 }
 
+/** 直排時 CJK 標點（。、，：；）在字格內的位置。 */
+enum class VerticalPunctuation(val label: String) {
+    CENTER("置中"),
+    TOP_RIGHT("右上"),
+}
+
 data class PageMetrics(
     val pageWidth: Int = 900,
     val pageHeight: Int = 920,
@@ -25,6 +31,8 @@ data class PageMetrics(
     val paragraphIndentEm: Float = 2f,
     val bold: Boolean = false,
     val underline: Boolean = false,
+    val underlineWidth: Float = 1f,
+    val punctuationPlacement: VerticalPunctuation = VerticalPunctuation.CENTER,
 ) {
     val contentWidth: Int
         get() = pageWidth - marginLeft - marginRight
@@ -95,6 +103,8 @@ class PaginationEngine(
     }
 
     private val widthCache = HashMap<Char, Float>()
+    private val punctuationCache = HashMap<Char, VerticalStyle>()
+    private val fontRenderContext = probeGraphics.fontRenderContext
 
     fun paginate(): Pagination {
         val pages = ArrayList<PageSpan>()
@@ -280,13 +290,24 @@ class PaginationEngine(
     }
 
     private fun verticalStyle(c: Char): VerticalStyle {
+        if (c in VERTICAL_PUNCTUATION_CHARS) {
+            return when (metrics.punctuationPlacement) {
+                VerticalPunctuation.CENTER -> VerticalStyle()
+                VerticalPunctuation.TOP_RIGHT -> {
+                    val form = VERTICAL_FORMS[c]
+                    if (form != null && font.canDisplay(form)) {
+                        VerticalStyle(drawChar = form)
+                    } else {
+                        punctuationCache.getOrPut(c) { topRightPunctuation(c) }
+                    }
+                }
+            }
+        }
         val verticalForm = VERTICAL_FORMS[c]
         if (verticalForm != null && font.canDisplay(verticalForm)) {
             return VerticalStyle(drawChar = verticalForm)
         }
         return when (c) {
-            // 直排形式不可用時，CJK 標點（。、，：；）直接沿用原字形：
-            // 這些字的墨水在字格內本來就置中，加位移反而會壓到欄線。
             '「', '」', '『', '』', '（', '）', '《', '》', '〈', '〉' ->
                 VerticalStyle(rotationDegrees = 90f)
             '…', '—', '～' ->
@@ -294,6 +315,20 @@ class PaginationEngine(
             else ->
                 if (isLatinOrDigit(c)) VerticalStyle(rotationDegrees = 90f) else VerticalStyle()
         }
+    }
+
+    /**
+     * 把標點的墨跡移到字格右上角（標準中文直排位置）。
+     * 用實際的字形視覺邊界計算位移，避免不同字型的基線差異。
+     */
+    private fun topRightPunctuation(c: Char): VerticalStyle {
+        val bounds = font.createGlyphVector(fontRenderContext, c.toString()).visualBounds
+        val centerX = (bounds.minX + bounds.width / 2f).toFloat()
+        val centerY = (bounds.minY + bounds.height / 2f).toFloat()
+        return VerticalStyle(
+            xOffset = metrics.fontSize * 0.75f - centerX,
+            yOffset = metrics.fontSize * 0.22f - fontMetrics.ascent - centerY,
+        )
     }
 
     private fun isLatinOrDigit(c: Char): Boolean =
@@ -307,6 +342,9 @@ class PaginationEngine(
     )
 
     private companion object {
+        val VERTICAL_PUNCTUATION_CHARS: Set<Char> =
+            setOf('。', '、', '，', '．', '：', '；')
+
         val VERTICAL_FORMS: Map<Char, Char> = mapOf(
             '。' to '\uFE12',
             '、' to '\uFE11',

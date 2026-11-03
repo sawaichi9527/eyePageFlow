@@ -60,6 +60,14 @@ class SettingsStore(private val file: Path) {
                 properties.getProperty(KEY_UNDERLINE_COLOR),
                 defaultDisplay.underlineColor,
             ),
+            underlineWidth = float(
+                properties.getProperty(KEY_UNDERLINE_WIDTH),
+                defaultDisplay.underlineWidth,
+            ),
+            punctuationPlacement = enumValue(
+                properties.getProperty(KEY_PUNCTUATION),
+                defaultDisplay.punctuationPlacement,
+            ),
             animation = enumValue(
                 properties.getProperty(KEY_ANIMATION),
                 defaultDisplay.animation,
@@ -121,6 +129,8 @@ class SettingsStore(private val file: Path) {
         properties[KEY_BOLD] = display.bold.toString()
         properties[KEY_UNDERLINE] = display.underline.toString()
         properties[KEY_UNDERLINE_COLOR] = display.underlineColor.toString(16)
+        properties[KEY_UNDERLINE_WIDTH] = display.underlineWidth.toString()
+        properties[KEY_PUNCTUATION] = display.punctuationPlacement.name
         properties[KEY_ANIMATION] = display.animation.name
         properties[KEY_DESKTOP_PATTERN] = display.desktopPatternId
         properties[KEY_COVER_PATTERN] = display.coverPatternId
@@ -164,6 +174,8 @@ class SettingsStore(private val file: Path) {
         const val KEY_BOLD = "display.bold"
         const val KEY_UNDERLINE = "display.underline"
         const val KEY_UNDERLINE_COLOR = "display.underlineColor"
+        const val KEY_UNDERLINE_WIDTH = "display.underlineWidth"
+        const val KEY_PUNCTUATION = "display.punctuationPlacement"
         const val KEY_ANIMATION = "display.animation"
         const val KEY_DESKTOP_PATTERN = "display.desktopPattern"
         const val KEY_COVER_PATTERN = "display.coverPattern"

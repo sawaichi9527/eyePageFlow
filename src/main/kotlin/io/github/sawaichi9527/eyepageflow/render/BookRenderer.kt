@@ -335,7 +335,7 @@ object BookRenderer {
         vertical: Boolean,
     ) {
         g2.color = theme.underlineColor
-        g2.stroke = BasicStroke(1f)
+        g2.stroke = BasicStroke(metrics.underlineWidth.coerceAtLeast(0.5f))
         if (!vertical) {
             val left = metrics.marginLeft
             val right = metrics.marginLeft + metrics.contentWidth

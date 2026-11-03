@@ -86,4 +86,19 @@ class SettingsStoreTest {
         assertEquals(32f, loaded.display.fontSize)
         assertEquals(1.7f, loaded.display.lineHeightFactor)
     }
+
+    @Test
+    fun `underline width and punctuation placement survive a reload`() {
+        val file = tempDir.resolve("underline.properties")
+        val store = SettingsStore(file)
+        val display = DisplaySettings(
+            underline = true,
+            underlineWidth = 2.5f,
+            punctuationPlacement = VerticalPunctuation.TOP_RIGHT,
+        )
+        store.saveDisplaySettings(display)
+        val loaded = store.load()
+        assertEquals(2.5f, loaded.display.underlineWidth)
+        assertEquals(VerticalPunctuation.TOP_RIGHT, loaded.display.punctuationPlacement)
+    }
 }

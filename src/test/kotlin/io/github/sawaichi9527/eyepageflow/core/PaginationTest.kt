@@ -2,6 +2,7 @@ package io.github.sawaichi9527.eyepageflow.core
 
 import io.github.sawaichi9527.eyepageflow.SampleText
 import io.github.sawaichi9527.eyepageflow.render.Typeface
+import java.awt.image.BufferedImage
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -79,6 +80,29 @@ class PaginationTest {
         val comma = glyphs[1]
         assertEquals(first.x, comma.x, 0.01f)
         assertEquals(first.y + metrics.fontSize, comma.y, 0.01f)
+    }
+
+    @Test
+    fun `vertical punctuation can sit at the top right`() {
+        val topRight = metrics.copy(punctuationPlacement = VerticalPunctuation.TOP_RIGHT)
+        val engine = PaginationEngine("檔，檔", topRight, WritingMode.VERTICAL, font)
+        val glyphs = engine.compose(engine.paginate().page(0)).glyphs
+        val cell = glyphs[0]
+        val comma = glyphs[1]
+
+        val image = BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        graphics.font = font
+        val fontMetrics = graphics.fontMetrics
+        val bounds = font.createGlyphVector(graphics.fontRenderContext, "，").visualBounds
+        graphics.dispose()
+
+        val inkCenterX = (comma.x + bounds.centerX).toFloat()
+        val inkCenterY = (comma.y + fontMetrics.ascent + bounds.centerY).toFloat()
+        val cellTop = cell.y + topRight.fontSize
+        assertEquals(cell.x + topRight.fontSize * 0.75f, inkCenterX, 0.5f)
+        assertEquals(cellTop + topRight.fontSize * 0.22f, inkCenterY, 0.5f)
+        assertEquals(topRight.fontSize, comma.cellHeight, 0.01f)
     }
 
     private fun verticalGlyphs(source: String): List<PlacedGlyph> {

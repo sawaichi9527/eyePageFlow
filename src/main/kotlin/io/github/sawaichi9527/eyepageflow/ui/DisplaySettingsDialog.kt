@@ -6,6 +6,7 @@ import io.github.sawaichi9527.eyepageflow.core.GutterColorCatalog
 import io.github.sawaichi9527.eyepageflow.core.LayoutMode
 import io.github.sawaichi9527.eyepageflow.core.PageTurnAnimation
 import io.github.sawaichi9527.eyepageflow.core.PaginationEngine
+import io.github.sawaichi9527.eyepageflow.core.VerticalPunctuation
 import io.github.sawaichi9527.eyepageflow.core.WritingMode
 import io.github.sawaichi9527.eyepageflow.render.BookRenderer
 import io.github.sawaichi9527.eyepageflow.render.PatternCatalog
@@ -139,6 +140,12 @@ class DisplaySettingsDialog(
     )
     private val boldCheck = JCheckBox("加粗", initial.bold)
     private val underlineCheck = JCheckBox("顯示下劃線", initial.underline)
+    private val underlineWidthSpinner = JSpinner(
+        SpinnerNumberModel(initial.underlineWidth.toDouble(), 0.5, 4.0, 0.5),
+    )
+    private val punctuationCombo = JComboBox(
+        VerticalPunctuation.entries.map { it.label }.toTypedArray(),
+    )
     private val animationCombo = JComboBox(
         PageTurnAnimation.entries.map { it.label }.toTypedArray(),
     )
@@ -211,9 +218,11 @@ class DisplaySettingsDialog(
         row("字體", fontCombo)
         row("大小（點）", fontSizeSpinner)
         row("高度（%）", lineHeightSpinner)
+        row("直排標點", punctuationCombo)
         row("", boldCheck)
         row("", underlineCheck)
         row("下劃線顏色", underlineColorButton)
+        row("下劃線粗細", underlineWidthSpinner)
 
         section("材質")
         row("桌面圖案", desktopPatternCombo)
@@ -299,6 +308,8 @@ class DisplaySettingsDialog(
         lineHeightSpinner.value = (draft.lineHeightFactor * 100).roundToInt()
         boldCheck.isSelected = draft.bold
         underlineCheck.isSelected = draft.underline
+        underlineWidthSpinner.value = draft.underlineWidth.toDouble()
+        punctuationCombo.selectedIndex = VerticalPunctuation.entries.indexOf(draft.punctuationPlacement)
         animationCombo.selectedIndex = PageTurnAnimation.entries.indexOf(draft.animation)
         desktopColor = Color(draft.desktopColor)
         coverColor = Color(draft.coverColor)
@@ -343,6 +354,8 @@ class DisplaySettingsDialog(
         lineHeightSpinner.addChangeListener { updateDraft() }
         boldCheck.addActionListener { updateDraft() }
         underlineCheck.addActionListener { updateDraft() }
+        underlineWidthSpinner.addChangeListener { updateDraft() }
+        punctuationCombo.addActionListener { updateDraft() }
         animationCombo.addActionListener { updateDraft() }
     }
 
@@ -492,6 +505,8 @@ class DisplaySettingsDialog(
             pageColor = pageColor.rgb and 0xFFFFFF,
             textColor = textColor.rgb and 0xFFFFFF,
             underlineColor = underlineColor.rgb and 0xFFFFFF,
+            underlineWidth = (underlineWidthSpinner.value as Double).toFloat(),
+            punctuationPlacement = VerticalPunctuation.entries[punctuationCombo.selectedIndex],
             gutterColor = gutterColor.rgb and 0xFFFFFF,
         )
         preview.settings = draft
