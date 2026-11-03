@@ -74,11 +74,15 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - `platform/SingleInstance.kt`：檔案鎖＋loopback socket；第二次啟動把檔案送到既有視窗。
 - 關窗未儲存提示。
 - `EditorPaneTest`：程式設定文字不觸發 dirty；插入文字會觸發 dirty；find／replace／replaceAll 正常。
-- 測試：81 個測試，0 失敗（Windows 與 Ubuntu 26.04 Wayland；含 4 個書頁渲染回歸測試）。
+- 測試：99 個測試，0 失敗（Windows 與 Ubuntu 26.04 Wayland；含 4 個書頁渲染回歸測試）。
 - 直排「數字壓在字上」的修正，分兩層：
   1. `BookRenderer.drawGlyph`：直排時把**行框在字格內垂直置中**。字格高 = 字號，但字型 ascent + descent 更大（Noto Serif CJK 26px 為 38px），沿用基線會讓每個字的墨跡往下溢 6px、壓到下一個字（`第10段` 的數字就是被 `第` 壓住）。
   2. `Pagination.verticalAdvance`：旋倒的半角字維持依字寬前進（`UTF-8` 不會被拉長），但下限由 0.3em 提到 0.5em，避免 `1`、`.` 的旋倒墨跡比字格高。
   旋轉分支另外改用**墨跡邊界置中**（與畫面轉換無關的 `FontRenderContext`），不再靠基線推算。曾試過「旋倒字固定 1em」，會讓 `UTF-8` 明顯變長，已否決。
+- 標點擠壓：連續標點的第二個以後壓成半個字寬（橫排右半、直排下半）；行尾／欄尾懸掛（差半個字就掛在內容區外，不多換一行）；行首／欄首壓成半寬。`」』）` 因墨跡靠右不列入連續壓縮；懸掛時若後面還有標點則不懸掛，避免整串被擠到行首。
+- 寡行控制：`Pagination.avoidWidowLine()` 往後量「頁尾到段末」，若只剩一行就能結束該段，就把本頁最後一行也推到下一頁，避免段末行單獨落在下一頁頂端。量測有容量上限，超過就停止，避免單一段落的長文件變成 O(n²)。
+- 行距微調：`PageMetrics.lineSpacing` 把一頁放不滿的剩餘高度平均分配給各行（最多放寬 5%），`PageUnderlines` 用同一組間距畫線；直排仍固定 1em 字格。
+- 孤行控制：`Pagination.avoidOrphanLine()` 不讓某段的第一行單獨留在頁面最下方（頁面至少還有一行、且該段還有後續時，把這一行移到下一頁）。橫排／直排都適用。寡行（段末行單獨落在下一頁頂端）尚未處理。
 - 材質快取：`TexturePainter` 把材質依（寬、高、底色、種類）快取成點陣圖，LRU 上限 6 M 像素（約 24 MB）。實測 20 次材質繪製由 254 ms 降到 80 ms（JIT 暖機後）。
 - 應用程式圖示：`--icon <path>` 產生 512×512 透明背景 PNG（`AppIcon` + `EmptyStateRenderer.renderIcon`，自製書頁 logo，無外部素材）。
 - AppImage：`scripts/package-appimage.sh` 把 app-image 組成 AppDir（`AppRun`＋`.desktop`＋`.png`）後用 `appimagetool` 打包，產出 `build/package/eyePageFlow-0.1.0-x86_64.AppImage`（44 MB）。
@@ -94,7 +98,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 - Ubuntu 24.04 原生 X11 驗證尚未執行（已延後至 P3）。
 - Windows GUI 互動驗證（拖放、IME、125%／150% 縮放、檔案對話框、編輯存檔）尚未執行；建置、測試、渲染、benchmark、啟動、托盤與單一實例已完成。
-- 直排標點位置（部分字型缺直排形式）、標點擠壓、頁面底部孤行控制仍未完成。
+- 直排的字距微調（垂直方向平均分配）、直排標點位置（部分字型缺直排形式）仍未完成。
 - 尚未做 golden image 基準與字型子集。
 - 目前環境的 GNOME／Wayland 不支援 `SystemTray`，老闆鍵會退回最小化；托盤在有支援的桌面才會安裝。
 - `AUTO`／`EQUAL_HEIGHT` 目前都當成雙頁；尚未依視窗比例或固定頁寬做真正區分。
@@ -244,7 +248,7 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 
 | 指令 | Exit | 結果 | 證據 |
 |---|---|---|---|
-| `./scripts/gradlew-local.sh test --rerun-tasks` | 0 | 81 tests、22 suites、0 failures、0 skipped | `build/test-results/test/` |
+| `./scripts/gradlew-local.sh test --rerun-tasks` | 0 | 99 tests、22 suites、0 failures、0 skipped | `build/test-results/test/` |
 | `./scripts/gradlew-local.sh check` | 0 | BUILD SUCCESSFUL | 終端輸出 |
 | WLToolkit 啟動 | 124（timeout） | `ui font: Noto Sans CJK TC 15pt`（修正前為 13pt／Ubuntu Sans） | `/tmp/opencode/ui-WLToolkit.log` |
 | XToolkit 啟動 | 124（timeout） | `ui font: Noto Sans CJK TC 15pt` | `/tmp/opencode/ui-XToolkit.log` |
@@ -264,6 +268,28 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 | JBR + x11 + `EYEPAGEFLOW_TOOLKIT=WLToolkit` | `toolkit=sun.awt.wl.WLToolkit` |
 
 同時確認 headless 路徑不受影響：`run --args="--benchmark"`（解碼 157.2 ms、橫排 314.8 ms／7,779 頁、直排 478.4 ms／8,420 頁）與 JBR 下 `--render` 四張 PNG 都正常。
+
+### 行距微調（2026-11-03）
+
+- `PageMetrics.lineSpacing`：行數不變，將 `contentHeight - 行數 × lineHeight` 平均分配；放寬上限 5%，否則沿用原行距。
+- `walkHorizontal` 與 `PageUnderlines.horizontalYs` 都改用 `lineSpacing`，文字與頁面線不會錯開。
+- `PaginationTest` 新增 2 個測試：放寬幅度 ≤ 5%、相鄰三行的 y 差距等於 `lineSpacing`。
+- 直排沒有對應實作（1em 字格固定），已列為未完成。
+
+### 標點擠壓（2026-11-03）
+
+- `Pagination`：`COMPRESSIBLE_PUNCTUATION`（`。、，．：；！？…`）在**同一行／同一欄內緊接另一個可擠壓標點**時，前進量減半；換行／換欄會重置。
+- 不列入 `」』）`：這些字的墨跡靠近右側，壓半寬會撞到前一個字。
+- `PaginationTest` 新增 6 個測試：橫排／直排壓縮、換行不延續、行首壓半寬、行尾懸掛（不換行）、墨跡靠右的標點不壓縮。
+- 行尾懸掛與禁則的互動：只有「該串標點的最後一個」可以懸掛，否則整串會被擠一個到行首（測試 `kinsoku keeps closing punctuation off line and column starts` 會抓到）。
+- 影響：10 MiB benchmark 頁數由 7,779／8,420 降為 7,724／8,375（每行多塞幾個標點），分頁時間仍為 378.4 ms／553.4 ms。
+
+### 孤行／寡行控制（2026-11-03）
+
+- `WalkResult` 增加 `lineStarts`（每個有內容的行／欄的起始 offset），`paginate()` 透過 `avoidOrphanLine()` 決定是否把段落首行推到下一頁。
+- `OrphanControlTest`（10 個測試）：孤行 4 個規則測試 + 寡行 3 個規則測試 + 「頁尾不得是縮排段落首行」整合測試 + 「寡行行數」整合測試 + 分頁覆蓋範圍測試。
+- 兩項都做過對照：停用孤行控制 → 整合測試 FAIL；停用寡行控制 → 寡行測試 FAIL。
+- 寡行量測加上容量上限後，benchmark 回到 379.8 ms（橫排）／558.5 ms（直排）；未加上限時單一段落文件會退化成 O(n²)（實測 268 秒）。
 
 ### 材質快取（2026-11-03）
 

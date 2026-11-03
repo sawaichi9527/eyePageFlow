@@ -96,6 +96,81 @@ class PaginationTest {
     }
 
     @Test
+    fun `line spacing spreads the leftover page height`() {
+        // 內容高 856、行距 25.2 → 33 行，剩 24.4px；平均分配後每行 856/33 ≈ 25.94。
+        val page = metrics.copy(pageWidth = 900, pageHeight = 920, marginTop = 32, marginBottom = 32)
+        val spacing = page.lineSpacing
+        assertTrue(spacing > page.lineHeight, "行距應該被放寬（實測 $spacing）")
+        assertTrue(spacing <= page.lineHeight * 1.05f, "放寬不得超過 5%（實測 $spacing）")
+    }
+
+    @Test
+    fun `horizontal lines use the fine-tuned spacing`() {
+        val text = "字".repeat(400)
+        val engine = PaginationEngine(text, metrics, WritingMode.HORIZONTAL, font)
+        val glyphs = engine.compose(engine.paginate().page(0)).glyphs
+        val rows = glyphs.map { it.y }.distinct().sorted()
+        assertTrue(rows.size >= 3, "需要至少三行才能比較行距")
+        assertEquals(metrics.lineSpacing, rows[2] - rows[1], 0.01f)
+    }
+
+    @Test
+    fun `consecutive punctuation is compressed horizontally`() {
+        val engine = PaginationEngine("檔。！檔", metrics, WritingMode.HORIZONTAL, font)
+        val glyphs = engine.compose(engine.paginate().page(0)).glyphs
+        assertEquals(metrics.fontSize * 0.5f, glyphs[2].cellWidth, 0.01f)
+        assertEquals(metrics.fontSize, glyphs[1].cellWidth, 0.01f)
+        assertEquals(0f, glyphs[2].x - (glyphs[1].x + glyphs[1].cellWidth), 0.01f)
+    }
+
+    @Test
+    fun `compression does not carry across a line break`() {
+        val engine = PaginationEngine("。\n檔！", metrics, WritingMode.HORIZONTAL, font)
+        val glyphs = engine.compose(engine.paginate().page(0)).glyphs
+        val exclamation = glyphs.first { it.char == '！' }
+        assertEquals(metrics.fontSize, exclamation.cellWidth, 0.01f)
+    }
+
+    @Test
+    fun `punctuation at line start is compressed to half width`() {
+        val engine = PaginationEngine("。檔", metrics, WritingMode.HORIZONTAL, font)
+        val glyphs = engine.compose(engine.paginate().page(0)).glyphs
+        assertEquals(metrics.fontSize * 0.5f, glyphs[0].cellWidth, 0.01f)
+        assertEquals(metrics.fontSize, glyphs[1].cellWidth, 0.01f)
+    }
+
+    @Test
+    fun `closing punctuation hangs at the line end instead of wrapping`() {
+        // 內容寬 431（頁寬 491、左右各 30），24 個全角字需要 432，差一個位元組。
+        // 行尾是標點時應該懸掛在右緣外，不要為了它多換一行。
+        val narrow = metrics.copy(pageWidth = 491)
+        val text = "字".repeat(23) + "。" + "檔"
+        val engine = PaginationEngine(text, narrow, WritingMode.HORIZONTAL, font)
+        val glyphs = engine.compose(engine.paginate().page(0)).glyphs
+        val period = glyphs.first { it.char == '。' }
+        val following = glyphs.first { it.char == '檔' }
+        assertEquals(period.y, glyphs.first().y, "標點應該留在同一行")
+        assertTrue(following.y > period.y, "後面的字才換行")
+    }
+
+    @Test
+    fun `consecutive punctuation is compressed vertically`() {
+        val engine = PaginationEngine("檔。！檔", metrics, WritingMode.VERTICAL, font)
+        val glyphs = engine.compose(engine.paginate().page(0)).glyphs
+        assertEquals(metrics.fontSize * 0.5f, glyphs[2].cellHeight, 0.01f)
+        assertEquals(metrics.fontSize, glyphs[1].cellHeight, 0.01f)
+        assertEquals(0f, glyphs[2].y - (glyphs[1].y + glyphs[1].cellHeight), 0.01f)
+    }
+
+    @Test
+    fun `punctuation that keeps its ink at the right edge is not compressed`() {
+        // `」』）` 的墨跡靠右，壓成半寬會撞到前一個字，所以不列入可擠壓集合。
+        val engine = PaginationEngine("檔，」檔", metrics, WritingMode.HORIZONTAL, font)
+        val glyphs = engine.compose(engine.paginate().page(0)).glyphs
+        assertEquals(metrics.fontSize, glyphs[2].cellWidth, 0.01f)
+    }
+
+    @Test
     fun `vertical punctuation can sit at the top right`() {
         val topRight = metrics.copy(punctuationPlacement = VerticalPunctuation.TOP_RIGHT)
         val engine = PaginationEngine("檔，檔", topRight, WritingMode.VERTICAL, font)

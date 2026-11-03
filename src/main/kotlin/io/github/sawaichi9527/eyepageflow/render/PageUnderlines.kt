@@ -13,8 +13,9 @@ object PageUnderlines {
         val count = floor(metrics.contentHeight / metrics.lineHeight)
             .toInt()
             .coerceAtLeast(1)
+        // 用實際行距（行距微調）畫線，否則線會和文字錯開。
         return (0 until count).map { line ->
-            (metrics.marginTop + (line + 1) * metrics.lineHeight - 2f).toInt()
+            (metrics.marginTop + (line + 1) * metrics.lineSpacing - 2f).toInt()
         }
     }
 

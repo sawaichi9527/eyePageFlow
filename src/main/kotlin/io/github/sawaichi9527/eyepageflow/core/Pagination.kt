@@ -24,6 +24,28 @@ internal val NO_LINE_END: Set<Char> = setOf(
     '（', '「', '『', '【', '《', '〈', '〔', '［', '｛',
 )
 
+/**
+ * 可以擠壓的標點：連續出現時，第二個以後只佔半個字寬（標點擠壓）。
+ * 只包含「墨跡在字格左／下方、右／下留白」的關閉類標點，壓縮後不會撞字。
+ */
+internal val COMPRESSIBLE_PUNCTUATION: Set<Char> = setOf(
+    '。', '、', '，', '．', '：', '；', '！', '？', '…',
+)
+
+private val COMPRESSIBLE_TABLE = BooleanArray(Char.MAX_VALUE.code + 1).also { table ->
+    COMPRESSIBLE_PUNCTUATION.forEach { table[it.code] = true }
+}
+
+/**
+ * 可以懸掛在行尾／欄尾、或壓成半寬放在行首／欄首的標點。
+ * 不含 `…—～・`：這些字本身橫跨多格，懸掛會超出太多。
+ */
+internal val HANGABLE_PUNCTUATION: Set<Char> = NO_LINE_START - setOf('…', '—', '～', '・')
+
+private val HANGABLE_TABLE = BooleanArray(Char.MAX_VALUE.code + 1).also { table ->
+    HANGABLE_PUNCTUATION.forEach { table[it.code] = true }
+}
+
 /** 查表版：避免每次禁則判斷都對 Char 裝箱。 */
 private val NO_LINE_START_TABLE = BooleanArray(Char.MAX_VALUE.code + 1).also { table ->
     NO_LINE_START.forEach { table[it.code] = true }
@@ -78,6 +100,21 @@ data class PageMetrics(
         get() = pageHeight - marginTop - marginBottom
     val lineHeight: Float
         get() = fontSize * lineHeightFactor
+
+    /**
+     * 實際行距（行距微調）。
+     *
+     * 一頁能放的行數固定為 `floor(contentHeight / lineHeight)`，剩下的高度原本全部
+     * 堆在頁尾；這裡把剩餘高度平均分配給每一行，讓最後一行貼近下緣。
+     * 只放寬不放寬超過 5%，避免小頁面被拉得太鬆；頁與頁之間間距一致（只跟版面參數有關）。
+     */
+    val lineSpacing: Float
+        get() {
+            val lines = floor(contentHeight / lineHeight).toInt().coerceAtLeast(1)
+            if (lines < 2) return lineHeight
+            val filled = contentHeight.toFloat() / lines
+            return if (filled > lineHeight && filled <= lineHeight * 1.05f) filled else lineHeight
+        }
 }
 
 data class PageSpan(
@@ -176,7 +213,11 @@ class PaginationEngine(
         var index = 0
         while (offset < text.length) {
             val result = walkPage(offset, collectGlyphs = false)
-            val end = if (result.endOffset <= offset) offset + 1 else result.endOffset
+            val walked = if (result.endOffset <= offset) offset + 1 else result.endOffset
+            var end = avoidOrphanLine(offset, walked, result.lineStarts)
+            end = avoidWidowLine(offset, end, result.lineStarts)
+            // 寡行控制推到前一行後，那個位置可能又變成段落首行，再檢查一次。
+            end = avoidOrphanLine(offset, end, result.lineStarts)
             pages += PageSpan(
                 index = index,
                 startOffset = offset,
@@ -191,6 +232,70 @@ class PaginationEngine(
             pages += PageSpan(0, 0, 0, 0, 0)
         }
         return Pagination(mode, metrics, text.length, pages)
+    }
+
+    /**
+     * 寡行控制：不讓某段的最後一行單獨落在下一頁最上方。
+     *
+     * 做法是往後看「從頁尾到段末」還剩多少：若只剩一行就能結束這一段，
+     * 而且本頁最後一行仍屬於同一段（不是段落首行），就把本頁最後一行也推到下一頁，
+     * 讓下一頁至少有兩行同一段的內容。
+     */
+    internal fun avoidWidowLine(start: Int, end: Int, lineStarts: List<Int>): Int {
+        if (lineStarts.size < 2) return end
+        if (end >= text.length) return end
+        if (text[end] == '\n' || text[end] == '\r') return end
+        val lastLineStart = lineStarts.last()
+        val lastLineStartsParagraph = lastLineStart == 0 ||
+            text[lastLineStart - 1] == '\n' ||
+            text[lastLineStart - 1] == '\r'
+        if (lastLineStartsParagraph) return end
+
+        val capacity = if (mode == WritingMode.HORIZONTAL) {
+            metrics.contentWidth.toFloat()
+        } else {
+            val rows = floor(metrics.contentHeight / metrics.fontSize).toInt().coerceAtLeast(1)
+            rows * metrics.fontSize
+        }
+
+        // 只要量到「超過一行容量」就夠了；否則單一段落的長文件會變成 O(n²)
+        // （10 MiB 只有一個段落時，每頁都掃到檔尾）。
+        var index = end
+        var used = 0f
+        while (index < text.length && used <= capacity &&
+            text[index] != '\n' && text[index] != '\r'
+        ) {
+            val pairLength = surrogatePairLength(text, index, text.length)
+            used += when {
+                mode == WritingMode.HORIZONTAL && pairLength == 1 -> charWidth(text[index])
+                mode == WritingMode.HORIZONTAL -> pairWidth(text.substring(index, index + 2))
+                pairLength > 1 -> metrics.fontSize
+                else -> verticalAdvance(text[index])
+            }
+            index += pairLength
+        }
+        // 段落一路到檔尾，代表後面沒有頁面，不需要處理。
+        if (index >= text.length) return end
+        val previousLineStart = lineStarts[lineStarts.size - 2]
+        return if (used <= capacity && previousLineStart > start) previousLineStart else end
+    }
+
+    /**
+     * 孤行控制：不讓某一段的第一行單獨留在頁面最下方。
+     *
+     * 只在「頁面還有其他行」且「這一行之後同一段還有內容」時把這一行移到下一頁，
+     * 所以不會產生空頁，也不會切斷跨頁本來就正常的段落。
+     */
+    internal fun avoidOrphanLine(start: Int, end: Int, lineStarts: List<Int>): Int {
+        if (lineStarts.size < 2) return end
+        val lastLineStart = lineStarts.last()
+        if (lastLineStart <= start) return end
+        val startsParagraph = lastLineStart == 0 ||
+            text[lastLineStart - 1] == '\n' ||
+            text[lastLineStart - 1] == '\r'
+        if (!startsParagraph) return end
+        val paragraphContinues = end < text.length && text[end] != '\n' && text[end] != '\r'
+        return if (paragraphContinues) lastLineStart else end
     }
 
     fun compose(span: PageSpan): PageContent {
@@ -219,8 +324,10 @@ class PaginationEngine(
         var line = 0
         var x = metrics.marginLeft.toFloat()
         var lineHasContent = false
+        var lastWasCompressible = false
         var indentNextLine = start > 0 && text[start - 1] == '\n'
-        val lineHeight = metrics.lineHeight
+        val lineStarts = ArrayList<Int>()
+        val lineHeight = metrics.lineSpacing
         val pageTop = metrics.marginTop.toFloat()
         val indent = metrics.fontSize * metrics.paragraphIndentEm
 
@@ -239,6 +346,7 @@ class PaginationEngine(
                 line += 1
                 x = metrics.marginLeft.toFloat()
                 lineHasContent = false
+                lastWasCompressible = false
                 indentNextLine = true
                 continue
             }
@@ -249,7 +357,16 @@ class PaginationEngine(
             }
 
             val pairLength = surrogatePairLength(text, index, limitEnd)
-            val width = if (pairLength == 1) charWidth(c) else pairWidth(text.substring(index, index + 2))
+            val naturalWidth = if (pairLength == 1) {
+                charWidth(c)
+            } else {
+                pairWidth(text.substring(index, index + 2))
+            }
+            // 標點擠壓：連續標點的第二個以後只佔半個字寬，行尾才不會被撐開。
+            val compress = pairLength == 1 && COMPRESSIBLE_TABLE[c.code] && lastWasCompressible
+            // 行首標點擠壓：真的遇到行首標點時（例如緊接換行），壓成半寬而不是推到下一行。
+            val startCompress = !lineHasContent && pairLength == 1 && HANGABLE_TABLE[c.code]
+            val width = if (compress || startCompress) naturalWidth * 0.5f else naturalWidth
             // 禁則：只在「下一個字是行首禁則字」或「本字是行尾禁則字」時才做完整前瞻。
             if (lineHasContent &&
                 isPunctuationCandidate(c, text.getOrNull(index + pairLength), limitEnd, index) &&
@@ -260,18 +377,27 @@ class PaginationEngine(
                 if (line >= maxLines) break
                 x = metrics.marginLeft.toFloat()
                 lineHasContent = false
+                lastWasCompressible = false
                 indentNextLine = false
                 continue
             }
 
             if (lineHasContent && x - metrics.marginLeft + width > metrics.contentWidth) {
-                flushLine(justify = true)
-                line += 1
-                if (line >= maxLines) break
-                x = metrics.marginLeft.toFloat()
-                lineHasContent = false
-                indentNextLine = false
-                continue
+                // 行尾標點懸掛：只差半個字以內時，允許標點掛在內容區右緣外，避免多換一行。
+                val nextIsPunctuation = index + pairLength < limitEnd &&
+                    isNoLineStart(text[index + pairLength])
+                val hangs = pairLength == 1 && HANGABLE_TABLE[c.code] && !nextIsPunctuation &&
+                    x - metrics.marginLeft + width * 0.5f <= metrics.contentWidth
+                if (!hangs) {
+                    flushLine(justify = true)
+                    line += 1
+                    if (line >= maxLines) break
+                    x = metrics.marginLeft.toFloat()
+                    lineHasContent = false
+                    lastWasCompressible = false
+                    indentNextLine = false
+                    continue
+                }
             }
 
             if (collect) {
@@ -291,6 +417,8 @@ class PaginationEngine(
                     ),
                 )
             }
+            if (!lineHasContent) lineStarts += index
+            lastWasCompressible = pairLength == 1 && COMPRESSIBLE_TABLE[c.code]
             x += width
             index += pairLength
             lineHasContent = true
@@ -299,7 +427,7 @@ class PaginationEngine(
         // 走到頁尾時，最後一行其實是被寬度擠滿的行（頁面還有後續內容）→ 拉齊；
         // 若已到文件結尾，那是段末行，不拉齊。
         flushLine(justify = limitEnd < text.length)
-        return WalkResult(index, glyphs ?: emptyList(), line, 0)
+        return WalkResult(index, glyphs ?: emptyList(), line, 0, lineStarts)
     }
 
     /**
@@ -340,6 +468,8 @@ class PaginationEngine(
         var column = 0
         var cursor = 0f
         var indentNextColumn = start > 0 && text[start - 1] == '\n'
+        var lastWasCompressible = false
+        val columnStarts = ArrayList<Int>()
         val indent = metrics.paragraphIndentEm * cellHeight
         val right = metrics.marginLeft + metrics.contentWidth
 
@@ -349,6 +479,7 @@ class PaginationEngine(
                 index += if (c == '\r' && index + 1 < limitEnd && text[index + 1] == '\n') 2 else 1
                 column += 1
                 cursor = 0f
+                lastWasCompressible = false
                 indentNextColumn = true
                 continue
             }
@@ -360,7 +491,12 @@ class PaginationEngine(
 
             val pairLength = surrogatePairLength(text, index, limitEnd)
             val style = verticalStyle(c)
-            val advance = if (pairLength > 1) metrics.fontSize else verticalAdvance(c)
+            val naturalAdvance = if (pairLength > 1) metrics.fontSize else verticalAdvance(c)
+            // 標點擠壓：直排時連續標點壓成半格。
+            val compress = pairLength == 1 && COMPRESSIBLE_TABLE[c.code] && lastWasCompressible
+            // 欄首標點擠壓：壓成半格而不是推到下一欄。
+            val startCompress = cursor == 0f && pairLength == 1 && HANGABLE_TABLE[c.code]
+            val advance = if (compress || startCompress) naturalAdvance * 0.5f else naturalAdvance
             // 禁則：欄底換欄前，先確認下一個字不會變成欄首禁則字。
             if (cursor > 0f &&
                 isPunctuationCandidate(c, text.getOrNull(index + pairLength), limitEnd, index) &&
@@ -368,16 +504,27 @@ class PaginationEngine(
             ) {
                 column += 1
                 cursor = 0f
+                lastWasCompressible = false
                 indentNextColumn = false
                 continue
             }
             if (cursor > 0f && cursor + advance > columnHeight) {
-                column += 1
-                cursor = 0f
-                indentNextColumn = false
-                continue
+                // 欄尾標點懸掛：只差半格以內時允許掛在內容區下緣外。
+                val nextIsPunctuation = index + pairLength < limitEnd &&
+                    isNoLineStart(text[index + pairLength])
+                val hangs = pairLength == 1 && HANGABLE_TABLE[c.code] && !nextIsPunctuation &&
+                    cursor + advance * 0.5f <= columnHeight
+                if (!hangs) {
+                    column += 1
+                    cursor = 0f
+                    lastWasCompressible = false
+                    indentNextColumn = false
+                    continue
+                }
             }
 
+            if (cursor == 0f) columnStarts += index
+            lastWasCompressible = pairLength == 1 && COMPRESSIBLE_TABLE[c.code]
             val x = right - (column + 1) * columnPitch +
                 (columnPitch - metrics.fontSize) / 2f
             val y = metrics.marginTop + cursor
@@ -405,7 +552,7 @@ class PaginationEngine(
             cursor += advance
         }
 
-        return WalkResult(index, glyphs ?: emptyList(), 0, column)
+        return WalkResult(index, glyphs ?: emptyList(), 0, column, columnStarts)
     }
 
     /**
@@ -456,6 +603,15 @@ class PaginationEngine(
             return usedBefore + charWidth(next) > metrics.contentWidth
         }
         if (!isNoLineStart(next)) return false
+        // 行尾懸掛：接下來的標點只要能掛在右緣外就不必提前換行；
+        // 但後面還有標點時不能用懸掛解套，否則整串會有一個被留在行首。
+        val afterNext = text.getOrNull(index + 2)
+        val nextIsLastOfRun = afterNext == null || !isNoLineStart(afterNext)
+        if (HANGABLE_TABLE[next.code] && nextIsLastOfRun &&
+            usedBefore + charWidth(next) * 0.5f <= metrics.contentWidth
+        ) {
+            return false
+        }
         var used = usedBefore
         var cursor = index + 1
         while (cursor < limitEnd && isNoLineStart(text[cursor])) {
@@ -481,6 +637,14 @@ class PaginationEngine(
             return usedBefore + verticalAdvance(next) > columnHeight
         }
         if (!isNoLineStart(next)) return false
+        // 欄尾懸掛：同橫排，只是改用欄高判斷。
+        val afterNext = text.getOrNull(index + 2)
+        val nextIsLastOfRun = afterNext == null || !isNoLineStart(afterNext)
+        if (HANGABLE_TABLE[next.code] && nextIsLastOfRun &&
+            usedBefore + verticalAdvance(next) * 0.5f <= columnHeight
+        ) {
+            return false
+        }
         var used = usedBefore
         var probe = index + 1
         while (probe < limitEnd && isNoLineStart(text[probe])) {
@@ -592,5 +756,7 @@ class PaginationEngine(
         val glyphs: List<PlacedGlyph>,
         val lineCount: Int,
         val columnCount: Int,
+        /** 每一個有內容的行／欄在文字中的起始 offset（孤行控制用）。 */
+        val lineStarts: List<Int> = emptyList(),
     )
 }
