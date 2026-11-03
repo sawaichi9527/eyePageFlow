@@ -315,6 +315,9 @@ object BookRenderer {
 
         if (metrics.underline) {
             drawPageUnderlines(pageGraphics, metrics, theme, vertical)
+            // drawPageUnderlines 會把畫筆改成下劃線顏色，畫字前必須還原，
+            // 否則文字會跟著變成下劃線顏色。
+            pageGraphics.color = theme.textColor
         }
         if (content.glyphs.isEmpty()) {
             pageGraphics.dispose()
@@ -357,7 +360,12 @@ object BookRenderer {
         metrics: FontMetrics,
     ) {
         val text = glyph.drawChar.toString()
-        val baseline = glyph.y + metrics.ascent
+        // 窄字（半角標點等）若沿用基線，墨跡會溢到下一格；把 em 框在字格內置中。
+        val baseline = if (glyph.rotationDegrees == 0f && glyph.cellHeight < glyph.cellWidth) {
+            glyph.y + glyph.cellHeight / 2f + (metrics.ascent - metrics.descent) / 2f
+        } else {
+            glyph.y + metrics.ascent
+        }
         if (glyph.rotationDegrees == 0f) {
             g2.drawString(text, glyph.x, baseline)
         } else {

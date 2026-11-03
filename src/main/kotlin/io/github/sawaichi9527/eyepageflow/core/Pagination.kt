@@ -313,9 +313,16 @@ class PaginationEngine(
             '…', '—', '～' ->
                 VerticalStyle(rotationDegrees = 90f)
             else ->
-                if (isLatinOrDigit(c)) VerticalStyle(rotationDegrees = 90f) else VerticalStyle()
+                if (isRotatedLatin(c)) VerticalStyle(rotationDegrees = 90f) else VerticalStyle()
         }
     }
+
+    /**
+     * 直排時要旋倒的字元：拉丁字母、數字，以及拉丁字串裡常見的半角標點
+     * （例如 `UTF-8` 的連字號）。半角標點若不旋轉，墨跡會落在基線下方而壓到下一格。
+     */
+    private fun isRotatedLatin(c: Char): Boolean =
+        isLatinOrDigit(c) || c in ASCII_ROTATED
 
     /**
      * 把標點的墨跡移到字格右上角（標準中文直排位置）。
@@ -342,6 +349,8 @@ class PaginationEngine(
     )
 
     private companion object {
+        const val ASCII_ROTATED = "-.,:;!?'\"()/\\%&+=#@_*<>|~^[]{}"
+
         val VERTICAL_PUNCTUATION_CHARS: Set<Char> =
             setOf('。', '、', '，', '．', '：', '；')
 

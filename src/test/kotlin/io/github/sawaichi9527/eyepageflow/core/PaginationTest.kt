@@ -74,6 +74,15 @@ class PaginationTest {
     }
 
     @Test
+    fun `vertical ascii hyphen is rotated with the latin run`() {
+        val glyphs = verticalGlyphs("UTF-8")
+        val hyphen = glyphs[3]
+        assertEquals('-', hyphen.char)
+        assertEquals(90f, hyphen.rotationDegrees, 0.01f)
+        assertEquals(glyphs[4].y - hyphen.y, hyphen.cellHeight, 0.01f)
+    }
+
+    @Test
     fun `vertical cjk punctuation keeps its cell origin`() {
         val glyphs = verticalGlyphs("檔，檔")
         val first = glyphs[0]
