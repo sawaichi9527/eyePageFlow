@@ -99,6 +99,18 @@ class PaginationTest {
         val cell = glyphs[0]
         val comma = glyphs[1]
 
+        assertEquals(topRight.fontSize, comma.cellHeight, 0.01f)
+
+        // 頁面字型若有直排逗號（U+FE10，例如 Linux 的 Noto Serif CJK TC），
+        // 排版直接用該字形，不再額外位移；此時墨跡已由字型放在字格右上角。
+        // 沒有直排形式時（例如 Windows 的新細明體）才用視覺邊界換算位移。
+        if (font.canDisplay('\uFE10')) {
+            // 直排沿欄往下推進，標點只比前一個字低一個字格，且不做水平位移。
+            assertEquals(cell.x, comma.x, 0.01f)
+            assertEquals(cell.y + cell.cellHeight, comma.y, 0.01f)
+            return
+        }
+
         val image = BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB)
         val graphics = image.createGraphics()
         graphics.font = font
@@ -111,7 +123,6 @@ class PaginationTest {
         val cellTop = cell.y + topRight.fontSize
         assertEquals(cell.x + topRight.fontSize * 0.75f, inkCenterX, 0.5f)
         assertEquals(cellTop + topRight.fontSize * 0.22f, inkCenterY, 0.5f)
-        assertEquals(topRight.fontSize, comma.cellHeight, 0.01f)
     }
 
     @Test

@@ -8,7 +8,9 @@
 
 顯示設定、空白狀態、雙擊開檔、翻頁動畫與整頁下劃線已完成；編輯模式已接上 RSyntaxTextArea，可切換閱讀／編輯、偵測 dirty、存檔同步、尋找／取代、單頁書本外觀與 undo/redo 100 上限，並有關窗未儲存提示。章節列表支援可切換規則與目前章節標示；顯示設定、章節規則、書籤、最近開啟檔案與書庫會存到 XDG／AppData。檔案列表、書庫管理、老闆鍵（最小化）與單一實例已完成。尚未完成檔案關聯註冊、Windows GUI 互動驗證與 Ubuntu 24.04 X11 驗證。
 
-Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 到 `.local/jdk-21`）與 `scripts/gradlew-local.ps1`（`JAVA_HOME`／`GRADLE_USER_HOME` 隔離於 `.local/`），建置、45 個測試、渲染、benchmark、GUI 啟動、托盤與單一實例轉送皆已通過。
+Ubuntu 26.04 Wayland 已完成本輪回歸：67 個測試、benchmark、渲染快照、JBR 原生 Wayland／XWayland 啟動與 Big5 開檔皆通過；過程中修掉一個只在 Linux 失敗的字型相依測試。
+
+Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 到 `.local/jdk-21`）與 `scripts/gradlew-local.ps1`（`JAVA_HOME`／`GRADLE_USER_HOME` 隔離於 `.local/`），建置、67 個測試、渲染、benchmark、GUI 啟動、托盤與單一實例轉送皆已通過。
 
 ## Completed
 
@@ -38,6 +40,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - 修正下劃線顏色污染文字：`drawPageUnderlines` 改掉畫筆顏色後沒有還原，字就沿用下劃線色。
 - 修正直排 `UTF-8` 的連字號壓在 `8` 上：半角標點改為與拉丁字串一起旋倒，並把窄字在字格內垂直置中。
 - `RenderRegressionTest`：4 個書頁渲染回歸測試（字色不被下劃線污染、字墨符合字級、窄字不溢出、標點右上位置），刻意用像素性質而非跨平台 golden image。
+- `PaginationTest` 的「直排標點右上」改為依字型能力分支：字型有 U+FE10 直排逗號（Linux Noto）時驗證「不位移、只下移一個字格」，沒有時才驗證 0.75em／0.22em 位移公式。原本的寫法寫死 Windows 的字型能力，在 Linux 必然失敗。
 - 禁則：`NO_LINE_START`／`NO_LINE_END` 查表，橫排與直排都在換行前用前瞻避開孤字；連續關閉標點整段帶到下一個行／欄。`PaginationTest` 驗證每一行／欄的首尾字元。
 - 左右對齊（橫排 justify）：因寬度換行的行把剩餘寬度平均分配到字距，段末行與剩餘 > 0.5em 的行不拉齊；`display.justify` 可關閉，顯示設定有「左右對齊（橫排）」核取方塊。
 - `Pagination.pageIndexFor`：文字 offset ↔ 頁碼（二分搜尋、夾邊界），`PaginationTest` 驗證每個 offset 都落在回傳頁碼的範圍內。
@@ -71,8 +74,8 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - `platform/SingleInstance.kt`：檔案鎖＋loopback socket；第二次啟動把檔案送到既有視窗。
 - 關窗未儲存提示。
 - `EditorPaneTest`：程式設定文字不觸發 dirty；插入文字會觸發 dirty；find／replace／replaceAll 正常。
-- 測試：57 個測試，0 失敗（Windows；含 4 個書頁渲染回歸測試）。
-- Benchmark：10 MiB Big5，橫排 191.4 ms、直排 342.9 ms。
+- 測試：67 個測試，0 失敗（Windows 與 Ubuntu 26.04 Wayland；含 4 個書頁渲染回歸測試）。
+- Benchmark（Windows）：10 MiB Big5，橫排 336.1 ms、直排 381.4 ms；Ubuntu 26.04 Wayland：解碼 130.2 ms、橫排 300.7 ms、直排 447.4 ms。
 - JBR 21 原生 Wayland：`sun.awt.wl.WLToolkit`。
 - JBR 21 XToolkit：`sun.awt.X11.XToolkit`。
 - `jlink` runtime image（97 MB）與 `jpackage --type app-image` 驗證。
@@ -107,7 +110,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 9. Windows MSI（jpackage）＋檔案關聯註冊。
 10. Linux AppImage；修掉 app-image 寫死 `-Dawt.toolkit.name=WLToolkit`。
-11. Ubuntu 24.04 原生 X11 回歸（清單見 `docs/linux-regression.md`，由另一台 Ubuntu 機器執行）。
+11. ~~Ubuntu 26.04 Wayland 回歸~~（已完成：67 tests、benchmark、渲染、WLToolkit／XToolkit、Big5 開檔；清單見 `docs/linux-regression.md`）。剩下 Ubuntu 24.04 原生 X11。
 
 ### P3 體驗
 
@@ -178,8 +181,40 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 尚未驗證（本次）：
 
 - Windows GUI 互動：拖放、IME、125%／150% 縮放、檔案對話框、剪貼簿、編輯後存檔、關窗提示。
-- Linux（X11／Wayland）完整回歸：交由另一台 Ubuntu 機器，清單見 `docs/linux-regression.md`。
+- Linux 原生 X11（需 Xorg session）與 Ubuntu 24.04；Ubuntu 26.04 Wayland 已於 2026-11-03 完成回歸，見下節。
 - 打包（MSI／AppImage）與檔案關聯註冊。
+
+### Linux 回歸（2026-11-03，Ubuntu 26.04.1 LTS / Wayland）
+
+環境：`XDG_SESSION_TYPE=wayland`、`WAYLAND_DISPLAY=wayland-0`、Temurin `21.0.12+8`（建置／測試）、JBR `21.0.11`（GUI）、Gradle `9.5.0`、`Noto Serif CJK TC`、`Noto Color Emoji`。
+基準 commit：`0fcfbdd`（`docs/linux-regression.md` 的清單）。
+
+| 指令 | Exit | 結果 | 證據 |
+|---|---|---|---|
+| `./scripts/gradlew-local.sh test --rerun-tasks` | 0 | **67 tests、20 suites、0 failures、0 errors、0 skipped** | `build/test-results/test/` |
+| `./scripts/gradlew-local.sh check` | 0 | BUILD SUCCESSFUL | 終端輸出 |
+| `./scripts/gradlew-local.sh run --args="--benchmark"` | 0 | 10 MiB、5,934,667 字、解碼 130.2 ms、橫排 300.7 ms／7,779 頁、直排 447.4 ms／8,323 頁 | `/tmp/opencode/linux-benchmark.log` |
+| `./scripts/gradlew-local.sh run --args="--render build/prototype"` | 0 | 橫排 10 頁、直排 11 頁、3,761 字；underline 版本同時產出 | `build/prototype/*.png`、`/tmp/opencode/linux-render.log` |
+| `JAVA_HOME=.local/jbr-21 JAVA_OPTS=-Dawt.toolkit.name=WLToolkit build/install/eyePageFlow/bin/eyePageFlow` | 124（timeout 終止，GUI 常駐） | `session=wayland`、`toolkit=sun.awt.wl.WLToolkit`、`startup typography: fontSize=26.0 font=Noto Serif CJK TC/26`、`tray: not supported` | `/tmp/opencode/linux-wayland-start.log` |
+| 同上，`-Dawt.toolkit.name=XToolkit` | 124（同上） | `toolkit=sun.awt.X11.XToolkit`、`tray: installed`（**XWayland，非原生 X11**） | `/tmp/opencode/linux-xwayland-start.log` |
+| WLToolkit 開 Big5 檔（自製 2,259 bytes／CRLF） | 124（同上） | `opened ... encoding=Big5 chars=1199 pages=4` | `/tmp/opencode/linux-open-big5.log` |
+
+第一次 `test --rerun-tasks` 為 67 tests / **1 failed**：`PaginationTest > vertical punctuation can sit at the top right`。
+原因：該測試寫死了「字型沒有 U+FE10 的近似位移」分支；Linux 的 Noto Serif CJK TC 有 U+FE10，排版改走直排形式（不位移），行為本身正確。修正測試後全綠。
+
+目視檢查（`build/prototype`）：
+
+- 直排：第 1 頁在右、往左遞增；內容寬 812／欄距 39 → 20 欄／頁；`。，` 留在字格內、`「」『』（）` 正確旋轉；`UTF-8`、`PageByFlow` 旋倒且不重疊。
+- 橫排：換行行尾貼齊內容區右緣（justify）、行首無 `。，、！？」』`（禁則）、段末行不拉齊。
+
+補充實測（暫用 `/tmp/opencode/verify` 的一次性 Java 探針，未進 repo）：
+
+| 項目 | 方法 | 結果 |
+|---|---|---|
+| emoji 佔格 | JBR 21 渲染 `檔😀😀😀檔` 直排／橫排 | 每個 emoji 佔一格、不重疊；JBR 能畫 Noto Color Emoji 彩色點陣 |
+| emoji（Temurin） | 同一份 PNG 改由 Temurin 21 產生 | **emoji 完全沒有墨跡**（空白字格）；字格與分頁仍正確 |
+| 下劃線粗細 | 藍線＋深色字，寬 0.5／1.0／1.5 | 三個等級目視可分辨（0.5 較淡、1.5 較粗） |
+| 下劃線顏色 | 藍線、字色 `#112233` | 文字像素數在三個寬度下都是 2,358 → 顏色不污染文字 |
 
 ### Linux 先前累積驗證
 
@@ -220,6 +255,7 @@ JBR 下載與 checksum：
 
 - Ubuntu 24.04 原生 X11（需 Xorg session）。
 - Ubuntu 24.04 Wayland。
+- Ubuntu 26.04 Wayland 的 GUI 互動（拖放、IME、縮放、檔案對話框、剪貼簿、編輯存檔、`AUTO` 版面切換）。
 - Windows 10／11 其他版本（本次為 Windows 10 IoT 企業版 LTSC 21H2／19044）。
 - Windows GUI 互動：拖放、IME、125%／150% 縮放、檔案對話框、剪貼簿、編輯存檔。
 - 直排標點與字型 fallback 的 golden image。
@@ -227,6 +263,8 @@ JBR 下載與 checksum：
 - 編輯器 10 MiB 的輸入延遲（M7）。
 
 ## Known issues
+
+- emoji 只在 JBR 21 有墨跡。Linux 的 Noto Color Emoji 是點陣（CBDT）字型，Temurin 21 的 Java2D 完全畫不出來（實測 0 墨跡像素），字格與分頁仍正確、畫面會留空白；Windows 的 Segoe UI Emoji 是向量字型不受影響。正式 Linux runtime 用 JBR，所以目前可接受，但用 Temurin 跑 Linux 版會看不到 emoji。
 
 - Windows 未安裝 Noto Serif CJK TC，`Typeface` 會依序退回 Noto Serif TC／新細明體／Noto Sans TC；Windows 與 Linux 的字型不同，頁數也會不同。
 - 直排半角字目前用字寬前進，未做整體字串的字距微調；旋倒字串在窄欄位仍可能與相鄰欄輕微重疊。
