@@ -9,6 +9,12 @@ fun main(args: Array<String>) {
     when {
         args.contains("--help") || args.contains("-h") -> printHelp()
         args.contains("--benchmark") -> Benchmark.run()
+        args.contains("--icon") -> {
+            val index = args.indexOf("--icon")
+            val target = args.getOrNull(index + 1)?.takeUnless { it.startsWith("--") }
+                ?: "build/package/eyePageFlow.png"
+            AppIcon.write(Path.of(target))
+        }
         args.contains("--render") -> {
             val index = args.indexOf("--render")
             val candidate = args.getOrNull(index + 1)

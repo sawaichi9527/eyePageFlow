@@ -79,6 +79,8 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
   1. `BookRenderer.drawGlyph`：直排時把**行框在字格內垂直置中**。字格高 = 字號，但字型 ascent + descent 更大（Noto Serif CJK 26px 為 38px），沿用基線會讓每個字的墨跡往下溢 6px、壓到下一個字（`第10段` 的數字就是被 `第` 壓住）。
   2. `Pagination.verticalAdvance`：旋倒的半角字維持依字寬前進（`UTF-8` 不會被拉長），但下限由 0.3em 提到 0.5em，避免 `1`、`.` 的旋倒墨跡比字格高。
   旋轉分支另外改用**墨跡邊界置中**（與畫面轉換無關的 `FontRenderContext`），不再靠基線推算。曾試過「旋倒字固定 1em」，會讓 `UTF-8` 明顯變長，已否決。
+- 應用程式圖示：`--icon <path>` 產生 512×512 透明背景 PNG（`AppIcon` + `EmptyStateRenderer.renderIcon`，自製書頁 logo，無外部素材）。
+- AppImage：`scripts/package-appimage.sh` 把 app-image 組成 AppDir（`AppRun`＋`.desktop`＋`.png`）後用 `appimagetool` 打包，產出 `build/package/eyePageFlow-0.1.0-x86_64.AppImage`（44 MB）。
 - Linux 打包：`scripts/package-linux.sh` 依序做 `installDist` → `jlink`（java.base/java.desktop/java.logging/java.prefs）→ `jpackage --type app-image` → 產出 `.desktop`（`MimeType=text/plain`、`Exec=eyePageFlow %f`）→ `tar.gz`。app-image 不寫死 AWT toolkit，靠程式自動選擇。
 - AWT toolkit 自動選擇：`platform.ToolkitSelection` + `Main.applyToolkitSelection()`。Linux + Wayland session + JVM 具備 `sun.awt.wl.WLToolkit` 才設 `WLToolkit`，其餘沿用 JVM 預設。覆寫改用 `-Deyepageflow.toolkit=`／`EYEPAGEFLOW_TOOLKIT`；`-Dawt.toolkit.name` 不能用來判斷，因為 JBR 會自己塞 `XToolkit` 當預設。
 - UI 文字：FlatLaf 依系統挑 sans CJK（`Noto Sans CJK TC`／`Noto Sans TC`，`Typeface.resolveUiFamily`），UI 字級下限 15pt；JBR 的 Wayland toolkit 原本只算出 13pt，中文又硬又擠，是「閱讀區以外字看起來很舊」的主因。啟動 log 會印 `ui font: <家族> <級數>`。
@@ -116,7 +118,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 ### P2 打包與平台（M10，約 1–2 天）
 
 9. Windows MSI（jpackage）＋檔案關聯註冊。
-10. Linux AppImage（**卡在工具**：本機沒有 `appimagetool`；目前先出 app-image + tar.gz + `.desktop`）。
+10. ~~Linux AppImage~~（已產出；`appimagetool` 放在 `.local/tools/`，未納入版控）。
 11. ~~Ubuntu 26.04 Wayland 回歸~~（已完成：67 tests、benchmark、渲染、WLToolkit／XToolkit、Big5 開檔；清單見 `docs/linux-regression.md`）。Ubuntu 24.04 原生 X11 已延後至 P3。
 
 ### P3 體驗
@@ -271,6 +273,7 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 | `build/package/eyePageFlow/`（app-image） | 74 MB | Wayland：`toolkit=sun.awt.wl.WLToolkit`、`opened ... pages=12`；`EYEPAGEFLOW_TOOLKIT=XToolkit`：`sun.awt.X11.XToolkit` |
 | `build/package/eyePageFlow.desktop` | — | `desktop-file-validate` exit 0 |
 | `build/package/eyePageFlow-0.1.0-linux-x64.tar.gz` | 45 MB | 解壓到 `/tmp/opencode/dist` 後直接執行：不帶 `JAVA_HOME` 也能啟動，`toolkit=sun.awt.wl.WLToolkit`、`ui font: Noto Sans CJK TC 15pt` |
+| `build/package/eyePageFlow-0.1.0-x86_64.AppImage` | 44 MB | `--appimage-extract` 後跑 `squashfs-root/AppRun`：benchmark 正常、開 Big5 檔 `pages=12`、`toolkit=sun.awt.wl.WLToolkit`。直接執行本體會被 appimagetool runtime 自刪（環境問題，見 Known issues） |
 
 `lib/app/eyePageFlow.cfg` 只有 `-Djpackage.app-version`，沒有 `-Dawt.toolkit.name`（確認未再寫死）。
 
@@ -340,9 +343,9 @@ JBR 下載與 checksum：
 - 章節規則、書籤、書庫與老闆鍵已可用；托盤在目前 GNOME／Wayland 不可用，老闆鍵以最小化替代。
 - 編輯模式空白鍵仍是插入空白，尚未照原作改成「下一頁」。
 - 檔案關聯註冊尚未實作；目前依靠命令列參數與單一實例轉送。
-- AppImage 尚未製作：需要 `appimagetool`（本機未安裝，需額外下載）。目前的可分送產物是 `build/package/eyePageFlow-0.1.0-linux-x64.tar.gz`。
+- **AppImage 在這台環境執行後會自我刪除**：`appimagetool` continuous build（4919cc4）在此沙箱跑 FUSE fallback 時，離開後會把 `.AppImage` 本體移除。用最小 AppDir 重打包也重現，所以不是本專案打包內容的問題；一般桌面環境尚未驗證。內容正確性已用 `--appimage-extract` + `AppRun` 驗過。
 - 檔案關聯的 `.desktop` 已產生並通過 `desktop-file-validate`，但**尚未安裝**到 `~/.local/share/applications`（會改動使用者環境，需另外確認）。
-- `jpackage` app-image 尚未包成 AppImage／MSI；正式打包在 M10。
+- Windows MSI 尚未製作（需要在 Windows 上跑 jpackage）。
 - Ubuntu 26.04 的 X11 session 不是預設，尚未測試。
 - 原作素材與說明文件有著作權，未包含在專案中。
 

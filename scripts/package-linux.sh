@@ -45,6 +45,10 @@ rm -rf "${OUT_DIR:?}/${APP_NAME}"
     --runtime-image "${RUNTIME_DIR}" \
     --dest "${OUT_DIR}"
 
+printf '==> 產生圖示\n'
+JAVA_HOME="${ROOT_DIR}/.local/jdk-21" \
+    "${ROOT_DIR}/build/install/eyePageFlow/bin/eyePageFlow" --icon "${OUT_DIR}/${APP_NAME}.png"
+
 printf '==> 產生桌面檔\n'
 cat > "${OUT_DIR}/${APP_NAME}.desktop" <<DESKTOP
 [Desktop Entry]
@@ -52,7 +56,7 @@ Type=Application
 Name=eyePageFlow
 Comment=以書頁方式閱讀與編輯純文字檔（Big5／UTF-8）
 Exec=${APP_NAME} %f
-Icon=utilities-terminal
+Icon=${APP_NAME}
 Terminal=false
 Categories=Office;Viewer;
 MimeType=text/plain;
@@ -61,7 +65,7 @@ DESKTOP
 
 printf '==> 產生壓縮檔\n'
 tar -czf "${OUT_DIR}/${APP_NAME}-${APP_VERSION}-linux-x64.tar.gz" \
-    -C "${OUT_DIR}" "${APP_NAME}" "${APP_NAME}.desktop"
+    -C "${OUT_DIR}" "${APP_NAME}" "${APP_NAME}.desktop" "${APP_NAME}.png"
 
 printf '\n完成：\n'
 printf '  app-image : %s\n' "${OUT_DIR}/${APP_NAME}/bin/${APP_NAME}"

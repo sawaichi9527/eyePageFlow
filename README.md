@@ -125,6 +125,13 @@ toolkit 由程式依 session 自動選擇（Linux + Wayland + JBR 用 `WLToolkit
 build/package/eyePageFlow/bin/eyePageFlow
 ```
 
+AppImage（需要 `appimagetool`，放在 `.local/tools/`）：
+
+```bash
+./scripts/package-appimage.sh
+build/package/eyePageFlow-0.1.0-x86_64.AppImage
+```
+
 原型快捷鍵：`V` 直排／橫排、`D` 單頁／雙頁、`T` 主題、`B` 低調模式、方向鍵／PgUp／PgDn 翻頁。
 
 ## 驗證數據

@@ -51,6 +51,18 @@ object EmptyStateRenderer {
         drawCentered(g2, "雙擊開啟檔案，或將檔案拖曳到此處", centerX, centerY + 250 * scale)
     }
 
+    /**
+     * 應用程式圖示（透明背景的書頁 logo），供 AppImage／桌面捷徑使用。
+     * 只畫 logo，不含文字，避免小尺寸下糊成一團。
+     */
+    fun renderIcon(g2: Graphics2D, size: Int) {
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        val scale = size / 260.0
+        val center = size / 2.0
+        drawGlow(g2, center, center, 120 * scale)
+        drawBook(g2, center, center, scale * 1.15, Theme.REALISTIC)
+    }
+
     private fun drawGlow(g2: Graphics2D, centerX: Double, centerY: Double, radius: Double) {
         val paint = RadialGradientPaint(
             centerX.toFloat(),
