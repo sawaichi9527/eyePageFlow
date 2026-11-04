@@ -6,7 +6,7 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 
 ## 目前狀態
 
-**M0 技術驗證完成；M1 進行中（檔案層與主視窗殼已完成第一步）。Ubuntu 26.04 原生 Wayland 已驗證；Windows 建置／測試／渲染／benchmark／啟動／單一實例已驗證（GUI 互動待驗證；Ubuntu 24.04 原生 X11 已延後至 P3）。**
+**M0 技術驗證完成；M1 進行中（檔案層與主視窗殼已完成第一步）。Ubuntu 26.04 原生 Wayland 已驗證；Windows 建置／測試／渲染／benchmark／啟動／單一實例／可攜式打包已驗證（GUI 互動待驗證；Ubuntu 24.04 原生 X11 已延後至 P3）。**
 
 已完成：
 
@@ -42,7 +42,7 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 - Java2D 自繪閱讀器
 - RSyntaxTextArea 3.6.3（編輯器）
 - JUnit 6
-- jlink + jpackage；Linux AppImage、Windows MSI
+- jlink + jpackage；Linux AppImage／tar.gz、Windows 可攜式 zip（不做安裝檔）
 - 專案隔離工具鏈：JDK 與 Gradle cache 放在 `.local/`，不修改系統環境
 
 ## 快速開始
@@ -108,6 +108,17 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
   scripts\gradlew-local.cmd run --args="D:\path\to\novel.txt"
   ```
 
+打包（app-image + zip，解開即可執行；不產生安裝檔）：
+
+```powershell
+.\scripts\package-windows.ps1
+build\package\eyePageFlow\eyePageFlow.exe
+```
+
+- 產出 `build\package\eyePageFlow-0.1.0-windows-x64.zip`（約 56 MB），解開後直接執行 `eyePageFlow\eyePageFlow.exe`。
+- 腳本會用 `jlink` 產生精簡 runtime，再用 `jpackage --type app-image` 打包，最後用打包進去的 `runtime\bin\java.exe` 跑一次 `--benchmark` 確認 Big5 能解碼。
+- 不做 MSI：`jpackage` 的 MSI 產生器需要額外的 WiX Toolset，本專案改以壓縮檔分送。
+
 原生 Wayland：
 
 ```bash
@@ -149,15 +160,16 @@ Linux（Ubuntu 26.04.1 LTS x86_64、Wayland、JBR 21.0.11）：
 
 Windows（Windows 10 x64、Temurin 21.0.12+8、Gradle 9.5.0）：
 
-- Benchmark：10 MiB Big5、5,934,667 字、解碼 113.2 ms
-  - 橫排：7,613 頁、336.1 ms
-  - 直排：8,193 頁、381.4 ms
-- 啟動：`toolkit=sun.awt.windows.WToolkit`、`tray: installed`
+- Benchmark（2026-11-04）：10 MiB Big5、5,934,667 字、解碼 119.9 ms
+  - 橫排：7,724 頁、369.3 ms
+  - 直排：8,375 頁、585.2 ms
+- 頁數與 Linux 完全一致：頁面字型已內嵌（`page font: Noto Serif CJK TC (embedded=true)`），不再依賴系統字型。
+- 啟動：`toolkit=sun.awt.windows.WToolkit`、`ui font: Noto Sans TC 15pt`、`tray: installed`
 - 開檔（單一實例轉送）：`encoding=Big5 chars=94 pages=1`
-- 測試：`.\scripts\gradlew-local.ps1 test` 通過（67 tests，0 failures）
+- 測試：`.\scripts\gradlew-local.ps1 test` 通過（115 tests，0 failures）
+- 可攜式打包：`build\package\eyePageFlow-0.1.0-windows-x64.zip`（55.7 MB），解開後可執行、Big5 解碼正常。
 - 排版參數已對齊原作 PageByPage 的實測值：頁 900×920、內容 812×856、字號 26、
   直排欄距 1.5 em、行距 1.44 em（原作頁 909×919、內容 825×872、字距 26 px、欄距／行距 39 px）。
-- 頁數與 Linux 差異來自字型 fallback（Windows 為新細明體）；Noto Serif CJK TC 未安裝。
 
 ## 文件
 
@@ -181,7 +193,7 @@ Windows（Windows 10 x64、Temurin 21.0.12+8、Gradle 9.5.0）：
 | M7 | 編輯模式、undo/redo、搜尋取代 |
 | M8 | 書籤、自動恢復、章節列表 |
 | M9 | 書庫、老闆鍵、托盤、檔案關聯 |
-| M10 | 雙平台驗證、AppImage／MSI、文件 |
+| M10 | 雙平台驗證、AppImage／可攜式 zip、文件 |
 
 ## 授權與致謝
 

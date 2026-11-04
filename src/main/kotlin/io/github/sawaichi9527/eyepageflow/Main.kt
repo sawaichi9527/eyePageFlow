@@ -13,7 +13,7 @@ fun main(args: Array<String>) {
             val index = args.indexOf("--icon")
             val target = args.getOrNull(index + 1)?.takeUnless { it.startsWith("--") }
                 ?: "build/package/eyePageFlow.png"
-            AppIcon.write(Path.of(target))
+            AppIcon.writeAs(Path.of(target))
         }
         args.contains("--render") -> {
             val index = args.indexOf("--render")
@@ -94,6 +94,7 @@ private fun printHelp() {    println(
           ./scripts/gradlew-local.sh run --args="--bookmarks"
           ./scripts/gradlew-local.sh run --args="--library"
           ./scripts/gradlew-local.sh run --args="--files"
+          ./scripts/gradlew-local.sh run --args="--icon build/package/eyePageFlow.ico"
           ./scripts/gradlew-local.sh run --args="--render build/prototype"
           ./scripts/gradlew-local.sh run --args="--benchmark"
 

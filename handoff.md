@@ -10,7 +10,7 @@
 
 Ubuntu 26.04 Wayland 已完成本輪回歸：67 個測試、benchmark、渲染快照、JBR 原生 Wayland／XWayland 啟動與 Big5 開檔皆通過；過程中修掉一個只在 Linux 失敗的字型相依測試。
 
-Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 到 `.local/jdk-21`）與 `scripts/gradlew-local.ps1`（`JAVA_HOME`／`GRADLE_USER_HOME` 隔離於 `.local/`），建置、67 個測試、渲染、benchmark、GUI 啟動、托盤與單一實例轉送皆已通過。
+Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 到 `.local/jdk-21`）與 `scripts/gradlew-local.ps1`（`JAVA_HOME`／`GRADLE_USER_HOME` 隔離於 `.local/`）。2026-11-04 已在 Windows 追平遠端 9 個 commit 並完成回歸：111 個測試、渲染、benchmark、GUI 啟動（`WToolkit`、內嵌字型）、托盤與可攜式 zip 打包皆通過；頁數與 Linux 完全一致。
 
 ## Completed
 
@@ -98,11 +98,15 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - JBR 21 原生 Wayland：`sun.awt.wl.WLToolkit`。
 - JBR 21 XToolkit：`sun.awt.X11.XToolkit`。
 - `jlink` runtime image（97 MB）與 `jpackage --type app-image` 驗證。
+- **Windows 可攜式打包**：`scripts/package-windows.ps1`（＋`.cmd`）依序做 `installDist` → 產生 ICO → `jlink` → `jpackage --type app-image` → smoke test → `Compress-Archive`，產出 `build\package\eyePageFlow-0.1.0-windows-x64.zip`（55.7 MB），解開後直接執行 `eyePageFlow\eyePageFlow.exe`。**不做 MSI**（jpackage MSI 需要 WiX Toolset，且使用者指定只要可攜式 zip）。
+- `AppIcon.writeAs()`：依副檔名輸出 PNG（Linux `.desktop`／AppImage）或 ICO（Windows `jpackage --icon`）。ICO 是 7 個尺寸（16–256）的 PNG-in-ICO，`AppIconTest` 4 個測試驗證檔頭、entry 位移與 payload 簽章。
+- **修正打包後無法使用 Big5／GB18030**：`package-linux.sh` 與 `package-windows.ps1` 的 `jlink --add-modules` 少了 `jdk.charsets`，精簡 runtime 因此沒有 Big5，開舊編碼檔案會丟 `UnsupportedCharsetException: Big5`（GUI 外觀完全正常，只有開檔才炸）。已在 jlink 模組清單補上 `jdk.charsets`，並在打包腳本加上 smoke test。
+- Windows 打包的 smoke test 改用**打包進去的 `runtime\bin\java.exe`** 跑 `--benchmark`（實際解一次 Big5），不能用 `eyePageFlow.exe`：jpackage 的 Windows GUI launcher 會立刻回 0 並把 JVM 丟到背景，JVM 失敗時也不例外。
 
 ## In progress
 
 - Ubuntu 24.04 原生 X11 驗證尚未執行（已延後至 P3）。
-- Windows GUI 互動驗證（拖放、IME、125%／150% 縮放、檔案對話框、編輯存檔）尚未執行；建置、測試、渲染、benchmark、啟動、托盤與單一實例已完成。
+- Windows GUI 互動驗證（拖放、IME、125%／150% 縮放、檔案對話框、編輯存檔）尚未執行；建置、測試、渲染、benchmark、啟動、托盤、單一實例與可攜式 zip 已完成。
 - 直排標點使用「置中」時已改為依墨跡邊界真正置中；字型缺直排形式、且選「右上」時仍用近似位移。
 - 尚未做 golden image 基準與字型子集。
 - 目前環境的 GNOME／Wayland 不支援 `SystemTray`，老闆鍵會退回最小化；托盤在有支援的桌面才會安裝。
@@ -127,7 +131,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 ### P2 打包與平台（M10，約 1–2 天）
 
-9. Windows MSI（jpackage）＋檔案關聯註冊。
+9. ~~Windows 可攜式 zip~~（已完成：`scripts/package-windows.ps1`，55.7 MB，解開即可執行；**不提供 MSI**，使用者已明確排除安裝檔）。檔案關聯註冊仍未做。
 10. ~~Linux AppImage~~（已產出；`appimagetool` 放在 `.local/tools/`，未納入版控）。
 11. ~~Ubuntu 26.04 Wayland 回歸~~（已完成：67 tests、benchmark、渲染、WLToolkit／XToolkit、Big5 開檔；清單見 `docs/linux-regression.md`）。Ubuntu 24.04 原生 X11 已延後至 P3。
 
@@ -300,6 +304,29 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 - Ubuntu 24.04 原生 X11（已延後至 P3）。
 - 拖放、IME、縮放、剪貼簿、編輯存檔、關窗提示等需要真人操作的項目。
 
+### Windows 回歸與可攜式打包（2026-11-04）
+
+環境：Windows 10 IoT 企業版 LTSC 21H2 x64（`10.0.19044`）、Temurin `21.0.12+8`、Gradle `9.5.0`、`sun.awt.windows.WToolkit`。
+基準 commit：`110940a`（`git pull --ff-only` 自 `0fcfbdd` 快轉 9 個 commit）。
+
+| 指令 | Exit | 結果 | 證據 |
+|---|---|---|---|
+| `.\scripts\gradlew-local.ps1 test --rerun-tasks` | 0 | **111 tests、26 suites、0 failures、0 errors、0 skipped** | `%TEMP%\opencode\win-baseline-test.log`、`build\test-results\test\` |
+| `.\scripts\gradlew-local.ps1 test --rerun-tasks`（本次變更後） | 0 | **115 tests、27 suites、0 failures、0 errors、0 skipped**（新增 `AppIconTest` 4 個） | `%TEMP%\opencode\win-final-test.log`、`build\test-results\test\` |
+| `.\scripts\gradlew-local.ps1 check` | 0 | BUILD SUCCESSFUL | 終端輸出 |
+| `.\scripts\gradlew-local.ps1 run --args="--render build/prototype"` | 0 | 橫排 11 頁、直排 12 頁、3,761 字；4 張 PNG | `build\prototype\*.png` |
+| `.\scripts\gradlew-local.ps1 run --args="--benchmark"` | 0 | 解碼 119.9 ms、橫排 369.3 ms／7,724 頁、直排 585.2 ms／8,375 頁 | 終端輸出 |
+| `.\scripts\gradlew-local.ps1 run`（GUI） | 手動終止 | `toolkit=sun.awt.windows.WToolkit`、`ui font: Noto Sans TC 15pt`、`page font: Noto Serif CJK TC (embedded=true)`、`tray: installed` | `%TEMP%\opencode\win-gui-baseline.log` |
+| `.\scripts\package-windows.ps1` | 0 | app-image 71.4 MB、zip 55.7 MB；smoke test 解碼 101.7 ms、橫排 345.8 ms／7,724 頁、直排 577.7 ms／8,375 頁 | `%TEMP%\opencode\win-package-3.log`、`build\package\` |
+| 解壓後用打包 runtime 跑 `--benchmark` | 0 | `encoding=Big5`、7,724／8,375 頁、解碼 141.7 ms | 終端輸出 |
+| `build\package\eyePageFlow\eyePageFlow.exe`（GUI） | 常駐 | 視窗標題 `eyePageFlow`、`Responding=True`；stdout 有 `toolkit=`／`ui font=`／`page font=` | `Get-Process` 觀察 |
+
+關鍵結論：
+
+- 內嵌字型讓 Windows 頁數與 Linux **完全相同**（7,724／8,375）；舊版 Windows 因字型 fallback 是 7,613／8,193。
+- 這台機器有 `Noto Sans TC`，`Typeface.resolveUiFamily()` 回傳它，所以 `ui font:` 不再落到 Segoe UI fallback（handoff 舊版把這條列為已知問題，已不成立）。
+- `build\prototype` 的頁數由 10／11 變成 11／12，是內嵌字型＋新排版規則的結果，與 Linux 一致。
+
 ### 內嵌字型與捲頁（2026-11-04）
 
 - 內嵌 `NotoSerifCJKtc-Regular.otf`（24 MB，SHA-256 見 `THIRD_PARTY_NOTICES.md`）：啟動 log 顯示 `page font: Noto Serif CJK TC (embedded=true)`；`eyePageFlow-0.1.0.jar` 由約 1 MB 增至 20 MB。
@@ -408,18 +435,21 @@ JBR 下載與 checksum：
 - Ubuntu 26.04 Wayland 的 GUI 互動（拖放、IME、縮放、檔案對話框、剪貼簿、編輯存檔、`AUTO` 版面切換）。
 - Windows 10／11 其他版本（本次為 Windows 10 IoT 企業版 LTSC 21H2／19044）。
 - Windows GUI 互動：拖放、IME、125%／150% 縮放、檔案對話框、剪貼簿、編輯存檔。
+- Windows 可攜式 zip 在其他機器（未安裝 Noto Sans TC、不同 DPI、Windows 11）的解壓執行。
 - 直排標點與字型 fallback 的 golden image。
 - 10 MiB 以上的檔案與 20 MiB 上限。
 - 編輯器 10 MiB 的輸入延遲（M7）。
 
 ## Known issues
 
-- UI 中文只在有 Noto Sans CJK／Noto Sans TC 的機器上變好（Linux）。Windows 上 `resolveUiFamily()` 回傳 null，選單／工具列的中文仍走 Segoe UI 的 fallback；要跨平台一致得等 P3 內嵌字型。
+- UI 中文只在有 Noto Sans CJK／Noto Sans TC 的機器上變好。Windows 開發機有 `Noto Sans TC`，所以 `ui font:` 顯示 `Noto Sans TC 15pt`；沒有安裝的 Windows 機器 `resolveUiFamily()` 仍回傳 null，選單／工具列會走 Segoe UI 的 fallback。
 - 這台 JVM 的 Swing 已經是反鋸齒（`awt.useSystemAAFontSettings=on` 由程式設定），`lcd`／`gasp` 對 FlatLaf 版面量測不出可見差異；「字很舊」的感覺來自字級與 hinting，不是沒有反鋸齒。
 
 - emoji 只在 JBR 21 有墨跡。Linux 的 Noto Color Emoji 是點陣（CBDT）字型，Temurin 21 的 Java2D 完全畫不出來（實測 0 墨跡像素），字格與分頁仍正確、畫面會留空白；Windows 的 Segoe UI Emoji 是向量字型不受影響。正式 Linux runtime 用 JBR，所以目前可接受，但用 Temurin 跑 Linux 版會看不到 emoji。
 
-- Windows 未安裝 Noto Serif CJK TC，`Typeface` 會依序退回 Noto Serif TC／新細明體／Noto Sans TC；Windows 與 Linux 的字型不同，頁數也會不同。
+- 頁面字型已內嵌（`page font: Noto Serif CJK TC (embedded=true)`），Windows／Linux 頁數一致；只有在顯示設定手動選其他字型家族時才會回到系統字型。
+- **jlink 的模組清單漏掉 `jdk.charsets` 會讓打包版失去 Big5／GB18030**。症狀是 GUI 完全正常、只有開舊編碼檔案時丟 `UnsupportedCharsetException`；兩個打包腳本都已補上，並在打包後用 `--benchmark` 驗一次 Big5 解碼。
+- **jpackage 的 Windows GUI launcher 會立刻回 0 並把 JVM 丟到背景**：JVM 失敗時 exit code 仍是 0，標準輸出仍會接到呼叫端的 console。因此不能用 `eyePageFlow.exe` 當 CI／smoke test 的判斷依據，要用 `runtime\bin\java.exe`。附帶影響：使用者雙擊後若啟動失敗，不會看到任何錯誤訊息。
 - 直排半角字目前用字寬前進，未做整體字串的字距微調；旋倒字串在窄欄位仍可能與相鄰欄輕微重疊。
 - `pwsh -File <script> --args="C:\path"` 會把磁碟機代號的 `:` 當成參數分隔而拆成兩個引數；請直接用 `.\scripts\gradlew-local.ps1 run --args="C:\path"`，或改用 `pwsh -Command "& '.\scripts\gradlew-local.ps1' run '--args=C:\path'"`。
 - 行尾由 `.gitattributes` 統一（文字檔 LF、`*.bat`／`*.cmd` CRLF）。既有 clone 若仍顯示整批 modified，執行 `git add --renormalize .` 或重新 clone。
@@ -434,7 +464,7 @@ JBR 下載與 checksum：
 - 檔案關聯註冊尚未實作；目前依靠命令列參數與單一實例轉送。
 - **AppImage 在這台環境執行後會自我刪除**：`appimagetool` continuous build（4919cc4）在此沙箱跑 FUSE fallback 時，離開後會把 `.AppImage` 本體移除。用最小 AppDir 重打包也重現，所以不是本專案打包內容的問題；一般桌面環境尚未驗證。內容正確性已用 `--appimage-extract` + `AppRun` 驗過。
 - 檔案關聯的 `.desktop` 已產生並通過 `desktop-file-validate`，但**尚未安裝**到 `~/.local/share/applications`（會改動使用者環境，需另外確認）。
-- Windows MSI 尚未製作（需要在 Windows 上跑 jpackage）。
+- Windows 不提供 MSI／安裝檔（使用者指定只要可攜式 zip，解開即可執行）；jpackage 的 MSI 另外需要 WiX Toolset。
 - Ubuntu 26.04 的 X11 session 不是預設，尚未測試。
 - 原作素材與說明文件有著作權，未包含在專案中。
 
