@@ -29,7 +29,7 @@ printf '==> 產生 runtime image（jlink）\n'
 rm -rf "${RUNTIME_DIR}"
 "${SDK_DIR}/bin/jlink" \
     --module-path "${SDK_DIR}/jmods" \
-    --add-modules java.base,java.desktop,java.logging,java.prefs \
+    --add-modules java.base,java.desktop,java.logging,java.prefs,jdk.charsets \
     --strip-debug --no-man-pages --no-header-files --compress=zip-6 \
     --output "${RUNTIME_DIR}"
 
@@ -48,6 +48,11 @@ rm -rf "${OUT_DIR:?}/${APP_NAME}"
 printf '==> 產生圖示\n'
 JAVA_HOME="${ROOT_DIR}/.local/jdk-21" \
     "${ROOT_DIR}/build/install/eyePageFlow/bin/eyePageFlow" --icon "${OUT_DIR}/${APP_NAME}.png"
+
+# jlink 的 runtime 少了 jdk.charsets 時，Big5／GB18030 會 UnsupportedCharsetException，
+# 但 GUI 看起來一切正常，只有開舊編碼檔案才會炸。--benchmark 會實際解一次 Big5。
+printf '==> 驗證 app-image（Big5 解碼）\n'
+"${OUT_DIR}/${APP_NAME}/bin/${APP_NAME}" --benchmark > /dev/null
 
 printf '==> 產生桌面檔\n'
 cat > "${OUT_DIR}/${APP_NAME}.desktop" <<DESKTOP
