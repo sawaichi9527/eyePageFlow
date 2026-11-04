@@ -110,18 +110,19 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 ## In progress
 
 - Ubuntu 24.04 原生 X11 驗證尚未執行（已延後至 P3）。
-- Windows GUI 互動驗證（拖放、IME、125%／150% 縮放、檔案對話框、編輯存檔）尚未執行；建置、測試、渲染、benchmark、啟動、托盤、單一實例與可攜式 zip 已完成。
+- **變更 Windows 顯示縮放（DPI）後，視窗不會立即重繪**：當下畫面可能還是舊比例，把視窗最大化／還原一次就恢復正常。需要確認是不是 Swing 沒收到 DPI 變更事件。
+- 建置、測試、渲染、benchmark、啟動、托盤、單一實例與可攜式 zip 已完成；Windows GUI 互動（IME、125%／150% 縮放、拖放、檔案對話框、書籤、書庫、編輯、關窗提示）已於 2026-11-04 由使用者實機確認。
 - 直排標點使用「置中」時已改為依墨跡邊界真正置中；字型缺直排形式、且選「右上」時仍用近似位移。
 - 尚未做 golden image 基準與字型子集。
 - 目前環境的 GNOME／Wayland 不支援 `SystemTray`，老闆鍵會退回最小化；托盤在有支援的桌面才會安裝。
 - `AUTO` 依寬高比（1.25）切換單／雙頁；`EQUAL_HEIGHT` 只依高度縮放。尚未做到「固定頁寬」的第三種尺寸。
-- 翻頁動畫 CURL 已是紙背鏡射＋陰影的 2D 近似，仍非真正的 3D 捲曲；方向已依寫作模式換算（直排為右翻書），但未依「單頁／雙頁」另外調整。
+- 翻頁動畫 CURL 已是紙背鏡射＋陰影的 2D 近似，仍非真正的 3D 捲曲；方向已依寫作模式換算（直排為右翻書），直排雙頁只掀半頁；翻頁速度（`PAGE_TURN_DURATION_NS`，220 ms）尚未調校，直排雙頁改半頁後體感變快。
 
 ## Next actions
 
 ### P0 收尾（約半天）
 
-1. Windows GUI 互動驗證：拖放、IME、125%／150% 縮放、檔案對話框、剪貼簿、編輯存檔、關窗提示。
+1. ~~Windows GUI 互動驗證~~（已完成 2026-11-04：IME 中英輸入、125%／150% 縮放、關窗未存提示、拖放、檔案對話框、書籤、書庫、編輯功能皆由使用者實機確認。縮放後需放大視窗才會重繪，列為已知問題）。剪貼簿未單獨確認。
 2. 文件同步：把舊數據（45 tests、191 ms）更新為現況，README 驗證數據比照。
 3. 定案顯示預設值（字級 26、直排標點、下劃線粗細與顏色）。
 
@@ -331,6 +332,22 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 - 這台機器有 `Noto Sans TC`，`Typeface.resolveUiFamily()` 回傳它，所以 `ui font:` 不再落到 Segoe UI fallback（handoff 舊版把這條列為已知問題，已不成立）。
 - `build\prototype` 的頁數由 10／11 變成 11／12，是內嵌字型＋新排版規則的結果，與 Linux 一致。
 
+### Windows GUI 互動驗證（2026-11-04）
+
+使用者實機操作（Windows 10 IoT LTSC 21H2／19044、Temurin 21.0.12+8、`WToolkit`），以真實 Big5 小說檔操作：
+
+| 項目 | 結果 | 備註 |
+|---|---|---|
+| IME 編輯輸入 | 通過 | 中英文輸入皆正常，選字與組字沒有跑位 |
+| 125%／150% 縮放 | 通過（有附帶狀況） | 版面正確、字級正常；但**變更縮放的當下不會立即套用**，要把視窗最大化／還原一次才重繪 |
+| 關窗未存提示 | 通過 | 編輯後未存檔直接關閉會跳出「目前的變更尚未儲存，要結束嗎？」 |
+| 拖放開檔 | 通過 | 檔案拖進視窗可開啟 |
+| 檔案對話框 | 通過 | 開檔／存檔對話框正常 |
+| 書籤、書庫 | 通過 | 列表、跳至、管理皆正常 |
+| 編輯功能 | 通過 | 閱讀／編輯切換、存檔、dirty 標記正常 |
+
+未單獨確認：剪貼簿（複製／貼上）、單一實例轉送在 GUI 互動下的行為、Ubuntu 端的 GUI 互動。
+
 ### 內嵌字型與捲頁（2026-11-04）
 
 - 內嵌 `NotoSerifCJKtc-Regular.otf`（24 MB，SHA-256 見 `THIRD_PARTY_NOTICES.md`）：啟動 log 顯示 `page font: Noto Serif CJK TC (embedded=true)`；`eyePageFlow-0.1.0.jar` 由約 1 MB 增至 20 MB。
@@ -445,6 +462,8 @@ JBR 下載與 checksum：
 - 編輯器 10 MiB 的輸入延遲（M7）。
 
 ## Known issues
+
+- **Windows 變更顯示縮放後不會立即重繪**：在「設定 → 顯示器 → 縮放與版面配置」切換 125%／150% 時，視窗當下的畫面仍是舊比例（文字、書頁尺寸沒跟著變），把視窗最大化或還原一次就恢復。推測 Swing 沒有收到 DPI 變更通知、也就沒有觸發重排；尚未確認是 AWT 事件沒來，還是程式在自己的 resize 路徑上才重算。可先用「最大化一次」當 workaround。
 
 - UI 中文只在有 Noto Sans CJK／Noto Sans TC 的機器上變好。Windows 開發機有 `Noto Sans TC`，所以 `ui font:` 顯示 `Noto Sans TC 15pt`；沒有安裝的 Windows 機器 `resolveUiFamily()` 仍回傳 null，選單／工具列會走 Segoe UI 的 fallback。
 - 這台 JVM 的 Swing 已經是反鋸齒（`awt.useSystemAAFontSettings=on` 由程式設定），`lcd`／`gasp` 對 FlatLaf 版面量測不出可見差異；「字很舊」的感覺來自字級與 hinting，不是沒有反鋸齒。
