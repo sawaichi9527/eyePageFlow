@@ -117,7 +117,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 ## In progress
 
-- **滑鼠／滾輪／捲軸與 F1、F3 的互動尚未真人驗證**：邏輯已有單元測試（點擊方向、閱讀歷程、捲軸對齊）與 GUI 啟動證據，但本機 GNOME Wayland 不允許 `java.awt.Robot`（remote desktop portal 拒絕 NotifyPointer），也沒有 `xdotool`，無法合成點擊／滾輪。可在 Windows 或 Ubuntu 24.04 X11 VM 補做。
+- **OS 層的滑鼠／鍵盤輸入尚未驗證**：本機為 GNOME Wayland，`java.awt.Robot` 被 remote desktop portal 拒絕（`NotifyPointer`），`xdotool` 需要 sudo 密碼而未能安裝，XWayland 的 XTEST 也不會把游標送進 Wayland 主機上的視窗。已改用 in-process 派送 Swing 事件驗證 listener 接線（見驗證章節）；實際手感仍建議在 Windows 或 Ubuntu 24.04 X11 由真人確認。
 - i18n 只涵蓋主視窗、狀態列、關於與使用說明；顯示設定、尋找／取代等對話框仍固定繁中。
 - 自訂圖片固定 cover 置中裁切，沒有偏移或縮放比例選項。
 - **變更 Windows 顯示縮放（DPI）後，視窗不會立即重繪**：當下畫面可能還是舊比例，把視窗最大化／還原一次就恢復正常。需要確認是不是 Swing 沒收到 DPI 變更事件。
@@ -513,10 +513,13 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 | `--guide`（zh-TW、原生 Wayland） | 124（GUI 常駐） | `toolkit=sun.awt.wl.WLToolkit`、`ui language: zh-TW`、`help dialog: lang=zh-TW` | `/tmp/opencode/guide-zh.log` |
 | `EYEPAGEFLOW_LANG=en ... --guide <Big5 檔>` | 124（同上） | `ui language: en`、`help dialog: lang=en`、`opened ... encoding=Big5 chars=8018 pages=15` | `/tmp/opencode/guide-en.log` |
 | 自訂頁面圖片 + `--settings` | 124（同上） | 設定檔 `display.pageImage=/tmp/opencode/epf-page.png`，啟動與預覽無例外 | `/tmp/opencode/image-smoke.log` |
+| in-process 事件探針（JBR、XToolkit、同一 JVM） | 0 | 對實際 `BookCanvas` 派送事件：點左半 → `page 3/15 (click)`、點右半 → `page 1/15 (click)`、滾輪 → `page 3/15 (wheel)`；`F1` → `help dialog: lang=zh-TW`；捲軸設到末端 → `page 13/15 (scrollbar)`；`Home` → `page 1/15 (key)`、`End` → `page 15/15 (key)`、`Ctrl+←` → `history back -> page 1/15`；`F3` → `editor mode` + `find dialog` | `/tmp/opencode/inproc3.log`、探針 `/tmp/opencode/InprocProbe.java`（未進 repo） |
+
+事件探針的做法：啟動真正的 `ReaderWindow`，從 component tree 找到 `BookCanvas`、`ReaderPanel` 與 `JScrollBar`，在 EDT 上 `dispatchEvent` `MouseEvent`／`MouseWheelEvent`、設定捲軸值，並從 `InputMap`／`ActionMap` 觸發 `F1`／`F3`／`Home`／`End`／`Ctrl+←`。這驗證的是實際 listener 與 action 接線，不是純函式；差別只在事件來源（程式內 vs. 作業系統）。
 
 未執行（本輪限制）：
 
-- 滑鼠點擊、滾輪、捲軸拖曳、F1／F3 的合成輸入：`java.awt.Robot` 在此 Wayland session 被 GNOME remote desktop portal 拒絕（`NotifyPointer methods`），且環境沒有 `xdotool`。方向與歷程邏輯由 `PageClickDirectionTest`／`NavigationHistoryTest` 覆蓋，GUI 只驗到啟動與說明視窗。
+- **OS 層輸入**：`java.awt.Robot` 在此 Wayland session 被 GNOME remote desktop portal 拒絕（`NotifyPointer methods`）；`xdotool` 需要 sudo 密碼而未能安裝；XWayland 的 XTEST 也無法把游標事件送進主機上的視窗。上述 in-process 探針已覆蓋 listener 接線，尚未做真人滑鼠操作。
 - 影像的實際外觀（自訂圖片 cover 裁切位置）只以 `ImagePainterTest` 與 `RenderRegressionTest` 的像素斷言驗證，未做目視比對。
 
 ### 內嵌字型與捲頁（2026-11-04）
