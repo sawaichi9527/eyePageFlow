@@ -522,6 +522,33 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 - **OS 層輸入**：`java.awt.Robot` 在此 Wayland session 被 GNOME remote desktop portal 拒絕（`NotifyPointer methods`）；`xdotool` 需要 sudo 密碼而未能安裝；XWayland 的 XTEST 也無法把游標事件送進主機上的視窗。上述 in-process 探針已覆蓋 listener 接線，尚未做真人滑鼠操作。
 - 影像的實際外觀（自訂圖片 cover 裁切位置）只以 `ImagePainterTest` 與 `RenderRegressionTest` 的像素斷言驗證，未做目視比對。
 
+### Session close（2026-11-04 23:18 CST）
+
+環境：Ubuntu `26.04.1 LTS` x86_64、Wayland session、Temurin `21.0.12+8`（建置／測試）、JBR `21.0.11`（GUI）、Gradle `9.5.0`；基準 commit `60a3e1f`，工作樹乾淨且與 `origin/main` 同步。
+
+本次 Session 的提交：
+
+- `20294d3` docs: record the Ubuntu 26.04 Wayland rerun
+- `10b320d` feat: add page navigation controls, help, custom images, and i18n
+- `c23f01a` docs: record the in-process input probe
+- `60a3e1f` feat: replace the book icon with an eye holding 筆
+
+| 指令 | Exit | Duration | 結果 | 證據 |
+|---|---|---|---|---|
+| `./scripts/gradlew-local.sh test --rerun-tasks` | 0 | 15s | **155 tests、35 suites、0 failures、0 errors、0 skipped** | `/tmp/opencode/sc-test.log`、`build/test-results/test/` |
+| `./scripts/gradlew-local.sh check` | 0 | 1s | BUILD SUCCESSFUL | `/tmp/opencode/sc-check.log` |
+| `./scripts/gradlew-local.sh run --args="--render /tmp/opencode/sc-render"` | 0 | 4s | 橫排 11 頁、直排 12 頁、3,761 字 | `/tmp/opencode/sc-render/*.png`、`sc-render.log` |
+| `./scripts/gradlew-local.sh run --args="--benchmark"`（單獨執行） | 0 | 3s | 10 MiB、5,934,667 字、解碼 135.0 ms、橫排 382.9 ms／7,724 頁、直排 680.6 ms／8,375 頁 | `/tmp/opencode/sc-benchmark.log` |
+| `installDist` + `--guide`（原生 Wayland） | 124（GUI 常駐） | 12s | `toolkit=sun.awt.wl.WLToolkit`、`ui language: zh-TW`、內嵌字型、Big5 15 頁、`help dialog: lang=zh-TW`、`tray: not supported` | `/tmp/opencode/sc-gui.log` |
+| `./scripts/package-linux.sh` | 0 | 21s | app-image、`.desktop`、tar.gz；`icon (512, 512)`；`desktop-file-validate` exit 0 | `/tmp/opencode/sc-package.log`、`build/package/` |
+
+本次未驗證（明確清單）：
+
+- Windows：新圖示在檔案總管／工作列的外觀、GUI 互動（本輪沒有 Windows 環境）。
+- OS 層滑鼠／鍵盤輸入（Wayland portal 與 `xdotool` 限制，已於 `handoff.md` 記錄 in-process 替代驗證）。
+- Ubuntu 24.04 Wayland session、`.desktop` 實際安裝、剪貼簿、10 MiB 以上檔案、編輯器 10 MiB 延遲。
+- AppImage 本輪未重建（`package-linux.sh` 不含 AppImage）。
+
 ### 應用程式圖示（2026-11-04）
 
 - 標記：非對稱眼眶（直接量 eyeShell 圖示的幾何：左尖 `(65,255)`、上緣 `x≈260/y≈158`、下緣 `x≈330/y≈390`、右尖 `(452,256)`）＋內嵌 Noto Serif CJK TC 的「筆」。
