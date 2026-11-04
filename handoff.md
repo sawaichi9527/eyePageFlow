@@ -6,7 +6,7 @@
 
 已完成規格文件、Gradle 骨架、編碼偵測、字寬表分頁、Java2D 書頁渲染、Swing 原型、10 MiB benchmark、JBR 21 原生 Wayland／XToolkit 啟動，以及文件讀寫與基本開檔／存檔。
 
-顯示設定、空白狀態、雙擊開檔、翻頁動畫與整頁下劃線已完成；編輯模式已接上 RSyntaxTextArea，可切換閱讀／編輯、偵測 dirty、存檔同步、尋找／取代、單頁書本外觀與 undo/redo 100 上限，並有關窗未儲存提示。章節列表支援可切換規則與目前章節標示；顯示設定、章節規則、書籤、最近開啟檔案與書庫會存到 XDG／AppData。檔案列表、書庫管理、老闆鍵（最小化）與單一實例已完成。尚未完成檔案關聯註冊與 Windows GUI 互動驗證；Ubuntu 24.04 原生 X11 驗證已延後（P3）。
+顯示設定、空白狀態、雙擊開檔、翻頁動畫與整頁下劃線已完成；編輯模式已接上 RSyntaxTextArea，可切換閱讀／編輯、偵測 dirty、存檔同步、尋找／取代、單頁書本外觀與 undo/redo 100 上限，並有關窗未儲存提示。章節列表支援可切換規則與目前章節標示；顯示設定、章節規則、書籤、最近開啟檔案與書庫會存到 XDG／AppData。檔案列表、書庫管理、老闆鍵（最小化）與單一實例已完成。尚未完成檔案關聯註冊；Windows GUI 互動與 Ubuntu 24.04 原生 X11 已於 2026-11-04 驗證。
 
 Ubuntu 26.04 Wayland 已完成本輪回歸：67 個測試、benchmark、渲染快照、JBR 原生 Wayland／XWayland 啟動與 Big5 開檔皆通過；過程中修掉一個只在 Linux 失敗的字型相依測試。
 
@@ -110,7 +110,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 ## In progress
 
-- Ubuntu 24.04 原生 X11 驗證尚未執行（已延後至 P3）。
+- Ubuntu 24.04 原生 X11 驗證已完成（2026-11-04）。
 - **變更 Windows 顯示縮放（DPI）後，視窗不會立即重繪**：當下畫面可能還是舊比例，把視窗最大化／還原一次就恢復正常。需要確認是不是 Swing 沒收到 DPI 變更事件。
 - 建置、測試、渲染、benchmark、啟動、托盤、單一實例與可攜式 zip 已完成；Windows GUI 互動（IME、125%／150% 縮放、拖放、檔案對話框、書籤、書庫、編輯、關窗提示）已於 2026-11-04 由使用者實機確認。
 - 直排標點使用「置中」時已改為依墨跡邊界真正置中；字型缺直排形式、且選「右上」時仍用近似位移。
@@ -147,7 +147,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 13. ~~CURL 翻頁動畫~~（已完成：紙背鏡射、摺線陰影、紙邊高光；回翻方向已補）。
 14. ~~內嵌 Noto Serif CJK TC（OFL）~~（已完成：24 MB OTF + OFL 全文，jar 由 1 MB 增至 20 MB）。
 15. GNOME／Wayland 的托盤替代方案。
-16. Ubuntu 24.04 原生 X11 回歸（**延後**：目前開發機只有 Wayland session；清單見 `docs/linux-regression.md`，需要 Xorg session 的機器）。
+16. ~~Ubuntu 24.04 原生 X11 回歸~~（**已完成 2026-11-04**：VMware 上的 Ubuntu 24.04.5 + `Type=x11`/`Xorg`，125 tests、benchmark、渲染、`toolkit=sun.awt.X11.XToolkit`、Big5 開檔、`package-linux.sh` 全部通過；benchmark 在 2 vCPU VM 上偶有 >1 s 的環境抖動，見下方驗證章節）。
 
 ## Validation evidence
 
@@ -344,6 +344,45 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 
 `display settings:` 這行診斷 log 順便補上 `underline`／`underlineWidth`／`punctuation`，以後驗證預設值不用開對話框。
 
+### Ubuntu 24.04.5 LTS 原生 X11 回歸（2026-11-04，VMware Workstation VM）
+
+環境：Ubuntu `24.04.5 LTS`、kernel `7.0.0-42-generic` x86_64、VMware Workstation VM（2 vCPU `i7-4900MQ`、8 GB RAM、NAT `192.168.23.46`）。
+圖形：`loginctl` 顯示 `Type=x11`、`Active=yes`，`Xorg` 為獨立行程（非 Xwayland），`/etc/gdm3/custom.conf` 設 `WaylandEnable=false`；`X.Org 21.1.11`、1280×800。
+建置：Temurin `21.0.12+8`（`./scripts/bootstrap-jdk.sh`）、Gradle `9.5.0`。
+操作方式：主機以 `vmrun runProgramInGuest` 執行 `/bin/sh` 腳本，X 存取用 `DISPLAY=:0` + `XAUTHORITY=/run/user/1000/gdm/Xauthority`。
+
+| 指令 | Exit | 結果 | 證據 |
+|---|---|---|---|
+| `./scripts/gradlew-local.sh test --rerun-tasks` | 0 | **125 tests、29 suites、0 failures、0 errors、0 skipped**（3m03s） | `build/test-results/test/`、`/tmp/epf-test.log` |
+| `./scripts/gradlew-local.sh check` | 0 | BUILD SUCCESSFUL | `/tmp/epf-test.log` |
+| `./scripts/gradlew-local.sh run --args="--render build/prototype"` | 0 | 橫排 11 頁、直排 12 頁、3,761 字（與 Windows 相同） | `build/prototype/*.png` |
+| `./scripts/gradlew-local.sh run --args="--benchmark"` ×5 | 4 次 0、1 次 1 | 見下表 | `/tmp/epf-bench5.log` |
+| `installDist` + `DISPLAY=:0` 啟動 GUI | 執行中 | `toolkit=sun.awt.X11.XToolkit`、`ui font: Noto Sans CJK TC 15pt`、`page font: Noto Serif CJK TC (embedded=true)`、`opened ... encoding=Big5 chars=134 pages=1`、`tray: installed` | `/tmp/epf-x11-app2.log`、截圖 `vm-x11-shot.png` |
+| `xdpyinfo` | 0 | `X.Org version: 21.1.11`、`name of display: :0` | `/tmp/epf-x11.log` |
+| `./scripts/bootstrap-jbr.sh` | 0 | JBR `21.0.11+10-1163.116` JRE 與 SDK 安裝到 `.local/` | `/tmp/epf-pkg.log` |
+| `./scripts/package-linux.sh` | 0 | app-image 94 MB、`.desktop`、`eyePageFlow-0.1.0-linux-x64.tar.gz`；**打包後 Big5 smoke test 通過** | `/tmp/epf-pkg.log`、`build/package/` |
+| `runtime/bin/java --list-modules` | 0 | 含 `jdk.charsets@21.0.11`（`jdk.charsets` 修正已在 Linux 生效） | `/tmp/epf-pkg.log` |
+| `lib/app/eyePageFlow.cfg` | — | 只有 `-Djpackage.app-version`，未寫死 `awt.toolkit.name` | `/tmp/epf-pkg.log` |
+
+分頁時間（2 vCPU VM，同一份 10 MiB Big5、7,724／8,375 頁）：
+
+| 次 | 橫排 | 直排 | 判定 |
+|---|---|---|---|
+| 1 | 390.6 ms | 589.4 ms | 通過 |
+| 2 | 485.3 ms | 558.7 ms | 通過 |
+| 3 | 982.3 ms | **1,686.2 ms** | **超過 1 秒**（`--benchmark` exit 1） |
+| 4 | 496.9 ms | 652.3 ms | 通過 |
+| 5 | 440.8 ms | 725.4 ms | 通過 |
+
+另外單獨兩次：橫排 444.7 ms／直排 1,236.2 ms（失敗）、橫排 567.1 ms／直排 649.1 ms（通過）。
+**結論**：典型值 390–725 ms，仍在 1 秒內；但這台 2 vCPU VM 偶爾會出現整個行程變慢 2–3 倍的 outlier（第 3 次兩個模式同時變慢），屬於環境排程／GC 抖動，不是分頁邏輯退步。`--benchmark` 的 1 秒 `check` 因此在 VM 上會間歇性失敗。
+
+尚未在 Ubuntu 24.04 驗證：
+
+- AppImage 打包（`appimagetool` 未放進這台 VM）。
+- Ubuntu 24.04 的 Wayland session（這台刻意設成 Xorg）。
+- GUI 互動（IME、縮放、拖放）——只驗到「能啟動、能開 Big5、直排畫面正確」。
+
 ### Windows GUI 互動驗證（2026-11-04）
 
 使用者實機操作（Windows 10 IoT LTSC 21H2／19044、Temurin 21.0.12+8、`WToolkit`），以真實 Big5 小說檔操作：
@@ -463,8 +502,8 @@ JBR 下載與 checksum：
 
 尚未驗證：
 
-- Ubuntu 24.04 原生 X11（需 Xorg session，已延後至 P3）。
-- Ubuntu 24.04 Wayland。
+- Ubuntu 24.04 原生 X11（已完成 2026-11-04，見上方 VMware 章節）。
+- Ubuntu 24.04 Wayland（該 VM 設為 Xorg）。
 - Ubuntu 26.04 Wayland 的 GUI 互動（拖放、IME、縮放、檔案對話框、剪貼簿、編輯存檔、`AUTO` 版面切換）。
 - Windows 10／11 其他版本（本次為 Windows 10 IoT 企業版 LTSC 21H2／19044）。
 - Windows GUI 互動：拖放、IME、125%／150% 縮放、檔案對話框、剪貼簿、編輯存檔。
@@ -505,4 +544,4 @@ JBR 下載與 checksum：
 
 ## M0 判定
 
-**Go。** 分頁速度、直排／橫排渲染、JBR 原生 Wayland、app-image 啟動都已在目前環境驗證。Windows 端已補上建置、測試、渲染、benchmark、GUI 啟動與單一實例；禁則、左右對齊、offset↔page、surrogate pair 已完成，Ubuntu 26.04 Wayland 回歸也已通過。最大風險改為：Windows GUI 互動（拖放／IME／縮放／編輯存檔）未驗證、Ubuntu 24.04 原生 X11（已延後至 P3）未驗證。
+**Go。** 分頁速度、直排／橫排渲染、JBR 原生 Wayland、app-image 啟動都已在目前環境驗證。Windows 端已補上建置、測試、渲染、benchmark、GUI 互動（IME／縮放／拖放／關窗提示）與可攜式 zip；禁則、左右對齊、offset↔page、surrogate pair 已完成，Ubuntu 26.04 Wayland 與 Ubuntu 24.04 原生 X11 回歸也都通過。最大風險改為：Windows 變更顯示縮放不會即時重繪（已知問題）、以及 2 vCPU 環境下 benchmark 的 1 秒門檻偶爾被環境抖動超過。

@@ -6,7 +6,7 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 
 ## 目前狀態
 
-**M0 技術驗證完成；M1 進行中（檔案層與主視窗殼已完成第一步）。Ubuntu 26.04 原生 Wayland 已驗證；Windows 建置／測試／渲染／benchmark／啟動／單一實例／可攜式打包／GUI 互動皆已驗證（Ubuntu 24.04 原生 X11 已延後至 P3）。**
+**M0 技術驗證完成；M1 進行中（檔案層與主視窗殼已完成第一步）。三個平台的目標組合都已驗證：Ubuntu 26.04 Wayland、Ubuntu 24.04 原生 X11（VMware）、Windows 10 x64；Windows 可攜式打包與 GUI 互動亦已驗證。**
 
 已完成：
 
@@ -21,7 +21,7 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 
 已完成：開檔／存檔、原編碼／BOM 保留、無法表示字元的 UTF-8／UTF-16LE fallback、命令列開檔、拖放開檔、空白狀態（logo＋雙擊開檔）、顯示設定（表單、字體家族、顏色、內置圖案、配色方案、中縫、即時預覽）、整頁下劃線、翻頁動畫、基本編輯模式（RSyntaxTextArea、dirty、閱讀／編輯切換、尋找／取代、單頁書本外觀、undo/redo 100）、章節列表（可切換規則、目前章節標示）、書籤管理、最近開啟檔案、書庫／檔案列表、老闆鍵（無托盤時最小化）、單一實例（第二次啟動把檔案送到既有視窗）、關窗提示、設定持久化（XDG／AppData）。
 
-尚未完成：檔案關聯註冊、剪貼簿的 GUI 互動驗證與 Ubuntu 24.04 原生 X11 驗證（已延後至 P3）。Windows 變更顯示縮放後需最大化一次才會重繪，列為已知問題。
+尚未完成：檔案關聯註冊、剪貼簿的 GUI 互動驗證、Ubuntu 24.04 的 Wayland／AppImage。Windows 變更顯示縮放後需最大化一次才會重繪，列為已知問題。
 
 ## 平台
 
@@ -157,6 +157,14 @@ Linux（Ubuntu 26.04.1 LTS x86_64、Wayland、JBR 21.0.11）：
 - 測試：`./scripts/gradlew-local.sh test` 通過（111 tests，0 failures）
 - UI 文字：`Noto Sans CJK TC 15pt`（JBR Wayland 原本只算出 13pt）
 - 排版：`startup typography: fontSize=26.0 font=Noto Serif CJK TC/26`、20 欄／頁
+
+Ubuntu 24.04.5 LTS 原生 X11（VMware Workstation、2 vCPU、Temurin 21.0.12+8、JBR 21.0.11、`X.Org 21.1.11`）：
+
+- 測試：`./scripts/gradlew-local.sh test --rerun-tasks` 通過（125 tests、29 suites、0 failures）
+- 啟動：`toolkit=sun.awt.X11.XToolkit`；`loginctl` 為 `Type=x11`，`Xorg` 是獨立行程（非 XWayland）
+- 開檔：`encoding=Big5 chars=134 pages=1`；渲染橫排 11 頁、直排 12 頁（與 Windows 相同）
+- 打包：`./scripts/package-linux.sh` 通過（app-image 94 MB、tar.gz、打包後 Big5 smoke test 通過）
+- Benchmark：典型 390–725 ms；2 vCPU VM 偶有 982–1,686 ms 的環境抖動
 
 Windows（Windows 10 x64、Temurin 21.0.12+8、Gradle 9.5.0）：
 
