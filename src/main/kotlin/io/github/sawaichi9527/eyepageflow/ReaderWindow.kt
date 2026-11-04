@@ -43,6 +43,7 @@ import java.awt.Dimension
 import java.awt.GradientPaint
 import java.awt.Graphics
 import java.awt.Graphics2D
+import java.awt.Rectangle
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 import java.awt.event.ActionEvent
@@ -835,14 +836,17 @@ private class ReaderPanel(
             settings.copy(animation = PageTurnAnimation.SLIDE),
             currentAnchor(),
         )
-        var remaining = 4
-        val timer = Timer(500) {
-            nextPage()
-            println("demo page ${spreadStart + 1}/${pagination.pageCount}")
-            remaining -= 1
-            if (remaining <= 0) {
-                (it.source as Timer).stop()
+        // 先往前翻三頁、再退回兩頁：兩個方向的動畫都要看得到。
+        val moves = listOf(1, 1, 1, -1, -1)
+        var index = 0
+        val timer = Timer(500) { event ->
+            if (index >= moves.size) {
+                (event.source as Timer).stop()
+                return@Timer
             }
+            if (moves[index] > 0) nextPage() else previousPage()
+            println("demo page ${spreadStart + 1}/${pagination.pageCount}")
+            index += 1
         }
         timer.start()
     }
@@ -1024,6 +1028,7 @@ private class ReaderPanel(
         private var animationTimer: Timer? = null
         private var animationKind = PageTurnAnimation.NONE
         private var animationStartNs = 0L
+        private var animationForward = true
         private var oldFrame: BufferedImage? = null
         private var newFrame: BufferedImage? = null
 
@@ -1069,6 +1074,7 @@ private class ReaderPanel(
             }
 
             oldFrame = capture(spreadStart)
+            animationForward = pageTurnForward(mode, spreadStart, target)
             spreadStart = target
             newFrame = capture(target)
             animationKind = settings.animation
@@ -1152,25 +1158,46 @@ private class ReaderPanel(
                 }
 
                 PageTurnAnimation.CURL -> {
-                    PageCurl.paint(graphics, old, new, progress)
+                    // 直排雙頁是右翻書：只掀左半那張紙，掃描範圍就是左半，
+                    // 掃過中縫會變成「一次翻兩頁」而且方向感被稀釋。
+                    val region = if (doublePage && mode == WritingMode.VERTICAL) {
+                        Rectangle(0, 0, width / 2, height)
+                    } else {
+                        Rectangle(0, 0, width, height)
+                    }
+                    PageCurl.paint(graphics, old, new, progress, animationForward, region)
                 }
 
                 PageTurnAnimation.SLIDE -> {
                     val offset = (width * progress).toInt()
-                    graphics.drawImage(old, -offset, 0, null)
-                    graphics.drawImage(new, width - offset, 0, null)
-                    val boundary = (width - offset).toFloat()
-                    val shadow = GradientPaint(
-                        boundary - 18f,
-                        0f,
-                        Color(0, 0, 0, 0),
-                        boundary,
-                        0f,
-                        Color(0, 0, 0, 90),
-                    )
+                    // 往前翻：舊頁往左推、新頁由右邊進來；往回翻則左右相反。
+                    val oldX = if (animationForward) -offset else offset
+                    val newX = if (animationForward) width - offset else offset - width
+                    graphics.drawImage(old, oldX, 0, null)
+                    graphics.drawImage(new, newX, 0, null)
+                    val boundary = if (animationForward) (width - offset).toFloat() else offset.toFloat()
+                    val shadow = if (animationForward) {
+                        GradientPaint(
+                            boundary - 18f,
+                            0f,
+                            Color(0, 0, 0, 0),
+                            boundary,
+                            0f,
+                            Color(0, 0, 0, 90),
+                        )
+                    } else {
+                        GradientPaint(
+                            boundary,
+                            0f,
+                            Color(0, 0, 0, 90),
+                            boundary + 18f,
+                            0f,
+                            Color(0, 0, 0, 0),
+                        )
+                    }
                     graphics.paint = shadow
                     graphics.fillRect(
-                        (boundary - 18f).toInt(),
+                        (if (animationForward) boundary - 18f else boundary).toInt(),
                         0,
                         18,
                         height,
@@ -1197,3 +1224,12 @@ private class ReaderPanel(
 }
 
 private const val PAGE_TURN_DURATION_NS = 220_000_000L
+
+/**
+ * 翻頁動畫的摺線方向：`true` 是由右緣往左，`false` 是由左緣往右。
+ *
+ * 橫排是左翻書，下一頁（頁碼變大）把右邊那張掀到左邊；
+ * 直排是右翻書，頁序由右往左，下一頁反而是把左邊那張掀到右邊。
+ */
+internal fun pageTurnForward(mode: WritingMode, from: Int, to: Int): Boolean =
+    if (mode == WritingMode.VERTICAL) to < from else to > from

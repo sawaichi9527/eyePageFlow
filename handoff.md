@@ -81,7 +81,11 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
   旋轉分支另外改用**墨跡邊界置中**（與畫面轉換無關的 `FontRenderContext`），不再靠基線推算。曾試過「旋倒字固定 1em」，會讓 `UTF-8` 明顯變長，已否決。
 - 標點擠壓：連續標點的第二個以後壓成半個字寬（橫排右半、直排下半）；行尾／欄尾懸掛（差半個字就掛在內容區外，不多換一行）；行首／欄首壓成半寬。`」』）` 因墨跡靠右不列入連續壓縮；懸掛時若後面還有標點則不懸掛，避免整串被擠到行首。
 - 寡行控制：`Pagination.avoidWidowLine()` 往後量「頁尾到段末」，若只剩一行就能結束該段，就把本頁最後一行也推到下一頁，避免段末行單獨落在下一頁頂端。量測有容量上限，超過就停止，避免單一段落的長文件變成 O(n²)。
-- 捲頁動畫：`render/PageCurl` 真正做紙背鏡射＋摺線陰影＋紙邊高光（原本只是平移＋陰影），`PageCurlTest` 5 個測試（進度 0／1、半程左右、紙背變暗、進度夾取）。
+- 捲頁動畫：`render/PageCurl` 真正做紙背鏡射＋摺線陰影＋紙邊高光（原本只是平移＋陰影），`PageCurlTest` 8 個測試（進度 0／1、前翻／回翻半程、兩個方向互為鏡射、紙背變暗、進度夾取、region 限制範圍）。
+- **翻頁動畫支援回翻**：`PageCurl.paint(..., forward)` 由 `BookCanvas.animateTo()` 依 `target > spreadStart` 決定方向。往前翻摺線由右緣往左跑，往回翻由左緣往右跑；SLIDE 也一樣改成雙向（舊頁與新頁左右對調、陰影換邊）。原本兩個方向共用同一個「由右往左」動畫。
+- **直排（右翻書）動畫方向反轉**：`animateTo()` 先看寫作模式——橫排「下一頁＝右→左」，直排「下一頁＝左→右」（把左邊那張紙掀到右邊），因為直排的頁序是右→左。`PageCurl` 只認摺線方向（`forward` = 右→左），模式換算留在 UI 層（`pageTurnForward()`，由 `PageTurnDirectionTest` 覆蓋）。
+- **直排雙頁只掀半頁**：`PageCurl.paint(..., region)` 把捲頁限制在指定矩形內。直排雙頁傳入左半頁，掃描距離從整個跨頁縮成一個頁寬（同樣 220 ms → 速度加倍、方向感明顯）；範圍外直接顯示新頁面，與實體書掀開一張紙後底下跨頁已經換掉一致。橫排與單頁維持原本的整張畫布。
+- 紙背原本實際上看不到：舊程式把鏡射後的紙背畫到摺線左側，卻把 clip 設在摺線右側，兩者沒有交集，畫面上只剩陰影與高光；`PageCurlTest` 當時也只比對「紙背位置與平面頁面不同」，所以沒抓到。已改成「clip 與鏡射同側」，並補上「紙背仍是舊頁面內容且比平面頁暗」的斷言。
 - 內嵌字型：`src/main/resources/fonts/NotoSerifCJKtc-Regular.otf`（OFL，24 MB）+ `Typeface` 以 `Font.createFont` 載入並註冊；預設頁面字型不再依賴系統安裝，Windows／Linux 頁數一致。授權與 SHA-256 記在 `THIRD_PARTY_NOTICES.md`，授權全文在 `fonts/OFL.txt`。啟動 log 會印 `page font:`。
 - 直排標點：`VerticalPunctuation.CENTER` 改為依墨跡邊界真正置中（補上繪圖端的行框置中補償），先前只是沿用基線、墨跡落在字格左下。
 - 版面模式：`DisplaySettings.doublePageFor()` 讓 AUTO 依畫布寬高比（≥1.25）自動單／雙頁，`BookCanvas` 在視窗縮放時即時切換；EQUAL_HEIGHT 交給 `BookRenderer` 的 `scaleToPageHeight`，只依高度縮放，雙頁字級與單頁相同。
@@ -111,7 +115,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - 尚未做 golden image 基準與字型子集。
 - 目前環境的 GNOME／Wayland 不支援 `SystemTray`，老闆鍵會退回最小化；托盤在有支援的桌面才會安裝。
 - `AUTO` 依寬高比（1.25）切換單／雙頁；`EQUAL_HEIGHT` 只依高度縮放。尚未做到「固定頁寬」的第三種尺寸。
-- 翻頁動畫 CURL 已是紙背鏡射＋陰影的 2D 近似，仍非真正的 3D 捲曲。
+- 翻頁動畫 CURL 已是紙背鏡射＋陰影的 2D 近似，仍非真正的 3D 捲曲；方向已依寫作模式換算（直排為右翻書），但未依「單頁／雙頁」另外調整。
 
 ## Next actions
 
@@ -138,7 +142,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 ### P3 體驗
 
 12. ~~`AUTO`／`EQUAL_HEIGHT` 區分~~（已完成：AUTO 依寬高比、EQUAL_HEIGHT 只依高度縮放）。
-13. ~~CURL 翻頁動畫~~（已完成：紙背鏡射、摺線陰影、紙邊高光）。
+13. ~~CURL 翻頁動畫~~（已完成：紙背鏡射、摺線陰影、紙邊高光；回翻方向已補）。
 14. ~~內嵌 Noto Serif CJK TC（OFL）~~（已完成：24 MB OTF + OFL 全文，jar 由 1 MB 增至 20 MB）。
 15. GNOME／Wayland 的托盤替代方案。
 16. Ubuntu 24.04 原生 X11 回歸（**延後**：目前開發機只有 Wayland session；清單見 `docs/linux-regression.md`，需要 Xorg session 的機器）。
@@ -458,7 +462,7 @@ JBR 下載與 checksum：
 - 直排縮排以「欄頂跳 2 格」近似；遇到新頁或空白行仍需更多測試。
 - surrogate pair 以單一字處理；頁面字型缺字（emoji）時退回 Segoe UI Emoji／Noto Emoji 等系統字型，仍可能因系統無 emoji 字型而顯示方框。
 - 每次重繪都重新產生程序化材質；動畫前需要快取。
-- 顯示設定已露出主題、版面、頁寬、字體家族、字級、行高、粗體、底線、五組顏色、三組內置圖案、配色方案、中縫具名預設色、動畫；CURL 目前是平移＋陰影的近似。
+- 顯示設定已露出主題、版面、頁寬、字體家族、字級、行高、粗體、底線、五組顏色、三組內置圖案、配色方案、中縫具名預設色、動畫；CURL 是 2D 近似（紙背鏡射＋摺線陰影），不是真正的 3D 捲曲。
 - 章節規則、書籤、書庫與老闆鍵已可用；托盤在目前 GNOME／Wayland 不可用，老闆鍵以最小化替代。
 - 編輯模式空白鍵仍是插入空白，尚未照原作改成「下一頁」。
 - 檔案關聯註冊尚未實作；目前依靠命令列參數與單一實例轉送。
