@@ -384,7 +384,7 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 
 尚未在 Ubuntu 24.04 驗證：
 
-- Ubuntu 24.04 的 Wayland session（這台刻意設成 Xorg）。
+- Ubuntu 24.04 的 Wayland session（這台刻意設成 Xorg，`WaylandEnable=false`）。**由使用者在 Ubuntu 26.04 Wayland 環境於 2026-11-04 晚間補驗**，清單見 `docs/linux-regression.md`。
 - Ubuntu 24.04 的 GUI 互動（IME、縮放、拖放）——只驗到「能啟動、能開 Big5、直排畫面正確」。
 - `.desktop` 實際安裝到 `~/.local/share/applications`（會改動使用者環境）。
 
