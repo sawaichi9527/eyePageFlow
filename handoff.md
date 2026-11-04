@@ -342,6 +342,20 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 
 `display settings:` 這行診斷 log 順便補上 `underline`／`underlineWidth`／`punctuation`，以後驗證預設值不用開對話框。
 
+### 自動恢復閱讀位置（2026-11-04，VMware Ubuntu 24.04 X11）
+
+端到端驗證（`xdotool` 送按鍵，模擬真實操作）：
+
+| 步驟 | 結果 |
+|---|---|
+| 產生 12 頁的 Big5 測試檔（160 段、9,810 bytes） | `opened ... encoding=Big5 chars=5170 pages=12` |
+| 清掉 `~/.config/eyePageFlow/reading-positions.properties` | 乾淨起點 |
+| 啟動後按 `Right` ×2（雙頁，每次前進 2 頁） | 畫面到第 5 頁 |
+| `alt+F4` 關窗（走 `requestClose` → `closeWindow`） | 寫入 `position.0.offset=2550`、`position.0.path=/tmp/epf-resume-big5.txt` |
+| 重新啟動同一個檔案 | **`resumed epf-resume-big5.txt at page 5/12 offset=2550`**；狀態列 `5/12, 41.67%` |
+
+備註：這台 VM 為了送按鍵裝了 `xdotool`（`sudo apt-get install -y xdotool`）。
+
 ### Ubuntu 24.04.5 LTS 原生 X11 回歸（2026-11-04，VMware Workstation VM）
 
 環境：Ubuntu `24.04.5 LTS`、kernel `7.0.0-42-generic` x86_64、VMware Workstation VM（2 vCPU `i7-4900MQ`、8 GB RAM、NAT `192.168.23.46`）。
