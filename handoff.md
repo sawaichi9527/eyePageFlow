@@ -10,6 +10,8 @@
 
 Ubuntu 26.04 Wayland 已完成本輪回歸（2026-11-04，基準 `bed4ab5`）：131 個測試、benchmark 388–437／657–715 ms、渲染 11／12 頁、JBR 原生 Wayland（`WLToolkit`）與強制 XToolkit 啟動、Big5 開檔、閱讀位置恢復、`package-linux.sh` 打包皆通過。
 
+2026-11-04 晚間再補一輪 UI 功能：滑鼠左右半區翻頁、滾輪、頁面捲軸、Home／End／↑／↓、F3、Ctrl+←／→ 閱讀歷程、F1 使用說明、編輯選單與工具列補齊，以及自訂背景圖片與 `Messages` 多語系架構（繁中預設、英／日可切換）。測試增至 **150 tests／34 suites**。
+
 Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 到 `.local/jdk-21`）與 `scripts/gradlew-local.ps1`（`JAVA_HOME`／`GRADLE_USER_HOME` 隔離於 `.local/`）。2026-11-04 已在 Windows 追平遠端 9 個 commit 並完成回歸：131 個測試、渲染、benchmark、GUI 啟動（`WToolkit`、內嵌字型）、托盤與可攜式 zip 打包皆通過；頁數與 Linux 完全一致。
 
 ## Completed
@@ -74,7 +76,12 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - `platform/SingleInstance.kt`：檔案鎖＋loopback socket；第二次啟動把檔案送到既有視窗。
 - 關窗未儲存提示。
 - `EditorPaneTest`：程式設定文字不觸發 dirty；插入文字會觸發 dirty；find／replace／replaceAll 正常。
-- 測試：131 個測試、30 suites，0 失敗（Windows 10、Ubuntu 24.04 X11、Ubuntu 26.04 Wayland；含 4 個書頁渲染回歸測試）。
+- 測試：150 個測試、34 suites，0 失敗（Windows 10、Ubuntu 24.04 X11、Ubuntu 26.04 Wayland 為 131 的基準再加本輪 19 個；含 4 個書頁渲染回歸測試）。
+- **滑鼠與頁面捲軸（2026-11-04）**：`BookCanvas` 左鍵點左右半區翻頁（橫排點右半、直排點左半，與 `pageTurnForward` 同方向），滾輪一格一頁；`ReaderPanel` 右側加 `JScrollBar`，以頁為單位、雙頁模式可見量為 2，拖曳時直接跳頁不播動畫。`pageClickTurnsForward()` 由 `PageClickDirectionTest` 覆蓋。
+- **閱讀快捷鍵（2026-11-04）**：Home／End 到檔案頭尾、↑／↓ 上下頁、F3 尋找下一個、Ctrl+←／Ctrl+→ 閱讀歷程。`core/NavigationHistory` 記錄頁碼（上限 100），換字級／字型／直排橫排重新分頁時清空；`NavigationHistoryTest` 5 個測試。
+- **選單、工具列與 F1 說明（2026-11-04）**：編輯選單補剪下／複製／貼上／全選；工具列補剪貼、復原／重做、書籤、說明；`ui/HelpDialog` 以 HTML 顯示快捷鍵（自製文字），F1 與「說明 → 使用說明」都可開啟，另有 `--guide` 供啟動驗證。
+- **自訂圖片（2026-11-04）**：`DisplaySettings` 增加 `desktopImage`／`coverImage`／`pageImage`（路徑，空字串表示用圖案），`render/ImagePainter` 以 cover 縮放並快取 8 張；檔案不存在時退回材質／純色。顯示設定「材質」區塊各加一列「選擇...／清除」。
+- **多語系架構（2026-11-04）**：`core/Messages` 以 UTF-8 讀 `i18n/messages*.properties`，語言由 `-Deyepageflow.lang` 或 `EYEPAGEFLOW_LANG` 決定（預設 zh-TW，缺鍵退回英文再退回繁中）。主視窗選單、工具列、狀態列、關於與使用說明已接上；`messages_en`／`messages_ja` 由 `MessagesTest` 驗證鍵齊全。對話框內容仍固定繁中。
 - 直排「數字壓在字上」的修正，分兩層：
   1. `BookRenderer.drawGlyph`：直排時把**行框在字格內垂直置中**。字格高 = 字號，但字型 ascent + descent 更大（Noto Serif CJK 26px 為 38px），沿用基線會讓每個字的墨跡往下溢 6px、壓到下一個字（`第10段` 的數字就是被 `第` 壓住）。
   2. `Pagination.verticalAdvance`：旋倒的半角字維持依字寬前進（`UTF-8` 不會被拉長），但下限由 0.3em 提到 0.5em，避免 `1`、`.` 的旋倒墨跡比字格高。
@@ -110,6 +117,9 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 ## In progress
 
+- **滑鼠／滾輪／捲軸與 F1、F3 的互動尚未真人驗證**：邏輯已有單元測試（點擊方向、閱讀歷程、捲軸對齊）與 GUI 啟動證據，但本機 GNOME Wayland 不允許 `java.awt.Robot`（remote desktop portal 拒絕 NotifyPointer），也沒有 `xdotool`，無法合成點擊／滾輪。可在 Windows 或 Ubuntu 24.04 X11 VM 補做。
+- i18n 只涵蓋主視窗、狀態列、關於與使用說明；顯示設定、尋找／取代等對話框仍固定繁中。
+- 自訂圖片固定 cover 置中裁切，沒有偏移或縮放比例選項。
 - **變更 Windows 顯示縮放（DPI）後，視窗不會立即重繪**：當下畫面可能還是舊比例，把視窗最大化／還原一次就恢復正常。需要確認是不是 Swing 沒收到 DPI 變更事件。
 - 直排標點使用「置中」時已改為依墨跡邊界真正置中；字型缺直排形式、且選「右上」時仍用近似位移。
 - 尚未做 golden image 基準與字型子集。
@@ -491,6 +501,24 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 - 10 MiB 以上檔案、20 MiB 上限、編輯器 10 MiB 輸入延遲（M7）。
 - AppImage 本輪未重打（24.04 已驗證 `APPIMAGE_EXTRACT_AND_RUN=1` 與直接執行）。
 
+### UI 功能擴充（2026-11-04 晚間，基準 `20294d3` + 本輪變更）
+
+環境：Ubuntu `26.04.1 LTS`、Wayland session、JBR `21.0.11`（GUI）、Temurin `21.0.12+8`（建置／測試）。
+
+| 指令 | Exit | 結果 | 證據 |
+|---|---|---|---|
+| `./scripts/gradlew-local.sh test --rerun-tasks` | 0 | **150 tests、34 suites、0 failures、0 errors、0 skipped**（新增 19：`NavigationHistory` 5、`Messages` 6、`ImagePainter` 3、點擊方向 3、自訂圖片渲染 1、設定持久化 1，另含既有測試） | `/tmp/opencode/feature-test3.log`、`build/test-results/test/` |
+| `./scripts/gradlew-local.sh run --args="--benchmark"`（單獨執行） | 0 | 解碼 136.7 ms、橫排 411.9 ms／7,724 頁、直排 664.0 ms／8,375 頁（頁數未變） | 終端輸出 |
+| `./scripts/gradlew-local.sh run --args="--render /tmp/opencode/feature-render"` | 0 | 橫排 11 頁、直排 12 頁、3,761 字 | `/tmp/opencode/feature-render/*.png` |
+| `--guide`（zh-TW、原生 Wayland） | 124（GUI 常駐） | `toolkit=sun.awt.wl.WLToolkit`、`ui language: zh-TW`、`help dialog: lang=zh-TW` | `/tmp/opencode/guide-zh.log` |
+| `EYEPAGEFLOW_LANG=en ... --guide <Big5 檔>` | 124（同上） | `ui language: en`、`help dialog: lang=en`、`opened ... encoding=Big5 chars=8018 pages=15` | `/tmp/opencode/guide-en.log` |
+| 自訂頁面圖片 + `--settings` | 124（同上） | 設定檔 `display.pageImage=/tmp/opencode/epf-page.png`，啟動與預覽無例外 | `/tmp/opencode/image-smoke.log` |
+
+未執行（本輪限制）：
+
+- 滑鼠點擊、滾輪、捲軸拖曳、F1／F3 的合成輸入：`java.awt.Robot` 在此 Wayland session 被 GNOME remote desktop portal 拒絕（`NotifyPointer methods`），且環境沒有 `xdotool`。方向與歷程邏輯由 `PageClickDirectionTest`／`NavigationHistoryTest` 覆蓋，GUI 只驗到啟動與說明視窗。
+- 影像的實際外觀（自訂圖片 cover 裁切位置）只以 `ImagePainterTest` 與 `RenderRegressionTest` 的像素斷言驗證，未做目視比對。
+
 ### 內嵌字型與捲頁（2026-11-04）
 
 - 內嵌 `NotoSerifCJKtc-Regular.otf`（24 MB，SHA-256 見 `THIRD_PARTY_NOTICES.md`）：啟動 log 顯示 `page font: Noto Serif CJK TC (embedded=true)`；`eyePageFlow-0.1.0.jar` 由約 1 MB 增至 20 MB。
@@ -605,6 +633,10 @@ JBR 下載與 checksum：
 - 編輯器 10 MiB 的輸入延遲（M7）。
 
 ## Known issues
+
+- **點擊翻頁與拖放／雙擊的邊界**：有文件時單擊左右半頁就會翻頁；空白狀態仍是雙擊開檔。若使用者只想讓視窗取得焦點而點到頁面，會順帶翻一頁。
+- **「黑絨」桌面圖案尚未實作**：`PatternCatalog` 只有純色、深木紋、淺木紋、亞麻布（外加本輪的自訂圖片）。
+- **自訂圖片失敗時無提示**：路徑失效或不是圖片會默默退回圖案／純色。
 
 - **Windows 變更顯示縮放後不會立即重繪**：在「設定 → 顯示器 → 縮放與版面配置」切換 125%／150% 時，視窗當下的畫面仍是舊比例（文字、書頁尺寸沒跟著變），把視窗最大化或還原一次就恢復。推測 Swing 沒有收到 DPI 變更通知、也就沒有觸發重排；尚未確認是 AWT 事件沒來，還是程式在自己的 resize 路徑上才重算。可先用「最大化一次」當 workaround。
 

@@ -80,12 +80,10 @@ object BookRenderer {
         val bookY = (targetHeight - bookHeight) / 2f
         val coverPad = 14f * scale
 
-        TexturePainter.paint(
-            g2,
-            Rectangle(0, 0, targetWidth, targetHeight),
-            theme.desktopColor,
-            theme.desktopTexture,
-        )
+        val desktopRect = Rectangle(0, 0, targetWidth, targetHeight)
+        if (!ImagePainter.paint(g2, desktopRect, theme.desktopImage)) {
+            TexturePainter.paint(g2, desktopRect, theme.desktopColor, theme.desktopTexture)
+        }
 
         g2.color = Color(
             theme.shadowColor.red,
@@ -110,7 +108,9 @@ object BookRenderer {
             16f,
             16f,
         )
-        TexturePainter.paintRounded(g2, cover, theme.coverColor, theme.coverTexture)
+        if (!ImagePainter.paintRounded(g2, cover, theme.coverImage)) {
+            TexturePainter.paintRounded(g2, cover, theme.coverColor, theme.coverTexture)
+        }
         g2.color = theme.coverColor.darker()
         g2.stroke = BasicStroke(1.5f)
         g2.draw(cover)
@@ -176,12 +176,10 @@ object BookRenderer {
         theme: Theme,
         font: Font,
     ) {
-        TexturePainter.paint(
-            g2,
-            Rectangle(0, 0, targetWidth, targetHeight),
-            theme.pageColor,
-            theme.pageTexture,
-        )
+        val lowKeyRect = Rectangle(0, 0, targetWidth, targetHeight)
+        if (!ImagePainter.paint(g2, lowKeyRect, theme.pageImage)) {
+            TexturePainter.paint(g2, lowKeyRect, theme.pageColor, theme.pageTexture)
+        }
         if (pageIndex !in 0 until pagination.pageCount) return
 
         val metrics = pagination.metrics
@@ -252,7 +250,9 @@ object BookRenderer {
         theme: Theme,
         isLeft: Boolean,
     ) {
-        TexturePainter.paint(g2, rect, theme.pageColor, theme.pageTexture)
+        if (!ImagePainter.paint(g2, rect, theme.pageImage)) {
+            TexturePainter.paint(g2, rect, theme.pageColor, theme.pageTexture)
+        }
 
         val shadeWidth = (rect.width * 0.12f).toInt().coerceAtLeast(8)
         val x = if (isLeft) rect.x + rect.width - shadeWidth else rect.x

@@ -12,6 +12,8 @@ import io.github.sawaichi9527.eyepageflow.core.LibraryStore
 import io.github.sawaichi9527.eyepageflow.core.DocumentDecodeException
 import io.github.sawaichi9527.eyepageflow.core.DocumentIO
 import io.github.sawaichi9527.eyepageflow.core.LayoutMode
+import io.github.sawaichi9527.eyepageflow.core.Messages
+import io.github.sawaichi9527.eyepageflow.core.NavigationHistory
 import io.github.sawaichi9527.eyepageflow.core.PageTurnAnimation
 import io.github.sawaichi9527.eyepageflow.core.Pagination
 import io.github.sawaichi9527.eyepageflow.core.PaginationEngine
@@ -35,7 +37,9 @@ import io.github.sawaichi9527.eyepageflow.ui.DisplaySettingsDialog
 import io.github.sawaichi9527.eyepageflow.ui.EditorPane
 import io.github.sawaichi9527.eyepageflow.ui.FileListDialog
 import io.github.sawaichi9527.eyepageflow.ui.FindReplaceDialog
+import io.github.sawaichi9527.eyepageflow.ui.HelpDialog
 import io.github.sawaichi9527.eyepageflow.ui.LibraryDialog
+import java.awt.Adjustable
 import java.awt.AlphaComposite
 import java.awt.BorderLayout
 import java.awt.CardLayout
@@ -66,6 +70,7 @@ import javax.swing.JMenuBar
 import javax.swing.JMenuItem
 import javax.swing.JOptionPane
 import javax.swing.JPanel
+import javax.swing.JScrollBar
 import javax.swing.JToolBar
 import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
@@ -95,6 +100,7 @@ object ReaderWindow {
         openBookmarks: Boolean = false,
         openLibrary: Boolean = false,
         openFiles: Boolean = false,
+        openGuide: Boolean = false,
     ) {
         System.setProperty("awt.useSystemAAFontSettings", "on")
         try {
@@ -158,6 +164,9 @@ object ReaderWindow {
             if (openFiles) {
                 reader.openFileList()
             }
+            if (openGuide) {
+                reader.openHelp()
+            }
         }
     }
 
@@ -197,6 +206,7 @@ object ReaderWindow {
         )
         println("toolkit=${Toolkit.getDefaultToolkit().javaClass.name}")
         UIManager.getFont("defaultFont")?.let { println("ui font: ${it.family} ${it.size}pt") }
+        println("ui language: ${Messages.currentLanguage}")
         println(
             "page font: ${Typeface.pageFont(io.github.sawaichi9527.eyepageflow.core.PageMetrics()).name} " +
                 "(embedded=${Typeface.hasEmbeddedFont})",
@@ -237,13 +247,17 @@ private class ReaderPanel(
     private val cardLayout = CardLayout()
     private val cards = JPanel(cardLayout)
     private val canvas = BookCanvas()
+    private val pageScroll = JScrollBar(Adjustable.VERTICAL)
+    private var syncingScroll = false
+    private val navigation = NavigationHistory()
+    private var findDialog: FindReplaceDialog? = null
     private val editorPane = EditorPane { onEditorDirty() }
     private var editing = false
     private var editorDirty = false
-    private val statusLeft = JLabel("就緒")
+    private val statusLeft = JLabel(Messages["status.ready"])
     private val statusRight = JLabel()
     private val toolbar = JToolBar()
-    private val recentMenu = JMenu("最近開啟")
+    private val recentMenu = JMenu(Messages["menu.file.recent"])
     val menuBar: JMenuBar = buildMenuBar()
 
     init {
@@ -251,7 +265,15 @@ private class ReaderPanel(
         cards.add(canvas, "reader")
         cards.add(editorPane, "editor")
         add(toolbar, BorderLayout.NORTH)
-        add(cards, BorderLayout.CENTER)
+        val center = JPanel(BorderLayout())
+        center.add(cards, BorderLayout.CENTER)
+        center.add(pageScroll, BorderLayout.EAST)
+        pageScroll.isVisible = false
+        pageScroll.addAdjustmentListener {
+            if (syncingScroll || editing || document == null) return@addAdjustmentListener
+            goToPage(pageScroll.value, animated = false, reason = "scrollbar")
+        }
+        add(center, BorderLayout.CENTER)
         add(createStatusBar(), BorderLayout.SOUTH)
         editorPane.applyTheme(theme, metrics, settings.fontFamily)
         editorPane.bindToggleEditor { toggleEditorMode() }
@@ -279,7 +301,7 @@ private class ReaderPanel(
         if (current == null && !editing && !editorDirty) {
             return "eyePageFlow"
         }
-        val name = current?.displayName ?: "未命名"
+        val name = current?.displayName ?: Messages["app.untitled"]
         val dirty = if (editorDirty || current?.modified == true) " *" else ""
         return "eyePageFlow - $name$dirty"
     }
@@ -292,56 +314,65 @@ private class ReaderPanel(
     private fun buildMenuBar(): JMenuBar {
         val bar = JMenuBar()
 
-        val fileMenu = JMenu("文件(F)")
-        fileMenu.add(menuItem("開啟...", "control O") { openFileDialog() })
-        fileMenu.add(menuItem("儲存", "control S") { save() })
-        fileMenu.add(menuItem("另存新檔...", "control shift S") { saveAs() })
+        val fileMenu = JMenu(Messages["menu.file"])
+        fileMenu.add(menuItem(Messages["menu.file.open"], "control O") { openFileDialog() })
+        fileMenu.add(menuItem(Messages["menu.file.save"], "control S") { save() })
+        fileMenu.add(menuItem(Messages["menu.file.saveAs"], "control shift S") { saveAs() })
         fileMenu.addSeparator()
-        fileMenu.add(menuItem("檔案列表...", "control W") { openFileList() })
-        fileMenu.add(menuItem("預設書架", "control H") { openDefaultShelf() })
-        fileMenu.add(menuItem("書庫管理...") { openLibraryManager() })
+        fileMenu.add(menuItem(Messages["menu.file.fileList"], "control W") { openFileList() })
+        fileMenu.add(menuItem(Messages["menu.file.defaultShelf"], "control H") { openDefaultShelf() })
+        fileMenu.add(menuItem(Messages["menu.file.library"]) { openLibraryManager() })
         fileMenu.addSeparator()
+        recentMenu.text = Messages["menu.file.recent"]
         fileMenu.add(recentMenu)
         fileMenu.addSeparator()
-        fileMenu.add(menuItem("結束", "control Q") { requestClose() })
+        fileMenu.add(menuItem(Messages["menu.file.exit"], "control Q") { requestClose() })
         bar.add(fileMenu)
 
-        val bookmarkMenu = JMenu("書籤(B)")
-        bookmarkMenu.add(menuItem("加入書籤", "control B") { addBookmark() })
-        bookmarkMenu.add(menuItem("書籤管理", "control G") { openBookmarkManager() })
+        val bookmarkMenu = JMenu(Messages["menu.bookmark"])
+        bookmarkMenu.add(menuItem(Messages["menu.bookmark.add"], "control B") { addBookmark() })
+        bookmarkMenu.add(menuItem(Messages["menu.bookmark.manage"], "control G") { openBookmarkManager() })
         bar.add(bookmarkMenu)
 
-        val editMenu = JMenu("編輯(E)")
-        editMenu.add(menuItem("復原", "control Z") { editorPane.undo() })
-        editMenu.add(menuItem("重做", "control Y") { editorPane.redo() })
+        val editMenu = JMenu(Messages["menu.edit"])
+        editMenu.add(menuItem(Messages["menu.edit.undo"], "control Z") { editorPane.undo() })
+        editMenu.add(menuItem(Messages["menu.edit.redo"], "control Y") { editorPane.redo() })
         editMenu.addSeparator()
-        editMenu.add(menuItem("尋找...", "control F") { openFindDialog(replaceMode = false) })
-        editMenu.add(menuItem("取代...", "control R") { openFindDialog(replaceMode = true) })
+        editMenu.add(menuItem(Messages["menu.edit.cut"], "control X") { editorPane.cut() })
+        editMenu.add(menuItem(Messages["menu.edit.copy"], "control C") { editorPane.copy() })
+        editMenu.add(menuItem(Messages["menu.edit.paste"], "control V") { editorPane.paste() })
+        editMenu.add(menuItem(Messages["menu.edit.selectAll"], "control A") { editorPane.selectAll() })
         editMenu.addSeparator()
-        editMenu.add(menuItem("編輯模式", "control E") { toggleEditorMode() })
+        editMenu.add(menuItem(Messages["menu.edit.find"], "control F") { openFindDialog(replaceMode = false) })
+        editMenu.add(menuItem(Messages["menu.edit.replace"], "control R") { openFindDialog(replaceMode = true) })
+        editMenu.addSeparator()
+        editMenu.add(menuItem(Messages["menu.edit.mode"], "control E") { toggleEditorMode() })
         bar.add(editMenu)
 
-        val viewMenu = JMenu("檢視(V)")
-        viewMenu.add(menuItem("顯示設定...", "control T") { openSettingsDialog() })
-        viewMenu.add(menuItem("章節列表...", "control P") { openChapterList() })
-        viewMenu.add(menuItem("章節規則...") { openChapterRuleDialog() })
+        val viewMenu = JMenu(Messages["menu.view"])
+        viewMenu.add(menuItem(Messages["menu.view.settings"], "control T") { openSettingsDialog() })
+        viewMenu.add(menuItem(Messages["menu.view.chapters"], "control P") { openChapterList() })
+        viewMenu.add(menuItem(Messages["menu.view.chapterRule"]) { openChapterRuleDialog() })
         viewMenu.addSeparator()
-        viewMenu.add(menuItem("直排／橫排", "control shift V") { toggleMode() })
-        viewMenu.add(menuItem("單頁／雙頁") { toggleDoublePage() })
-        viewMenu.add(menuItem("切換主題") { toggleTheme() })
-        viewMenu.add(menuItem("低調模式") { toggleLowKey() })
-        viewMenu.add(menuItem("老闆鍵（最小化）") { bossKey() })
+        viewMenu.add(menuItem(Messages["menu.view.writingMode"], "control shift V") { toggleMode() })
+        viewMenu.add(menuItem(Messages["menu.view.spread"]) { toggleDoublePage() })
+        viewMenu.add(menuItem(Messages["menu.view.theme"]) { toggleTheme() })
+        viewMenu.add(menuItem(Messages["menu.view.lowkey"]) { toggleLowKey() })
+        viewMenu.add(menuItem(Messages["menu.view.bossKey"]) { bossKey() })
         bar.add(viewMenu)
 
-        val helpMenu = JMenu("說明(H)")
+        val helpMenu = JMenu(Messages["menu.help"])
+        helpMenu.add(menuItem(Messages["menu.help.manual"], "F1") { openHelp() })
         helpMenu.add(
-            menuItem("關於 eyePageFlow") {
+            menuItem(Messages["menu.help.about"]) {
                 JOptionPane.showMessageDialog(
                     this,
-                    "eyePageFlow 0.1.0\n" +
-                        "PageByPage 功能復刻原型\n" +
-                        "Java ${System.getProperty("java.version")}",
-                    "關於",
+                    Messages.format(
+                        "about.body",
+                        "0.1.0",
+                        System.getProperty("java.version"),
+                    ),
+                    Messages["about.title"],
                     JOptionPane.INFORMATION_MESSAGE,
                 )
             },
@@ -368,21 +399,30 @@ private class ReaderPanel(
 
     private fun buildToolbar() {
         toolbar.isFloatable = false
-        toolbar.add(button("開啟") { openFileDialog() })
-        toolbar.add(button("儲存") { save() })
-        toolbar.add(button("編輯模式") { toggleEditorMode() })
+        toolbar.add(button(Messages["toolbar.open"]) { openFileDialog() })
+        toolbar.add(button(Messages["toolbar.save"]) { save() })
         toolbar.addSeparator()
-        toolbar.add(button("直排／橫排") { toggleMode() })
-        toolbar.add(button("單頁／雙頁") { toggleDoublePage() })
+        toolbar.add(button(Messages["toolbar.cut"]) { editorPane.cut() })
+        toolbar.add(button(Messages["toolbar.copy"]) { editorPane.copy() })
+        toolbar.add(button(Messages["toolbar.paste"]) { editorPane.paste() })
         toolbar.addSeparator()
-        toolbar.add(button("上一頁") { previousPage() })
-        toolbar.add(button("下一頁") { nextPage() })
+        toolbar.add(button(Messages["toolbar.undo"]) { editorPane.undo() })
+        toolbar.add(button(Messages["toolbar.redo"]) { editorPane.redo() })
         toolbar.addSeparator()
-        toolbar.add(button("顯示設定") { openSettingsDialog() })
-        toolbar.add(button("章節") { openChapterList() })
-        toolbar.add(button("書庫") { openLibraryManager() })
-        toolbar.add(button("主題") { toggleTheme() })
-        toolbar.add(button("低調模式") { toggleLowKey() })
+        toolbar.add(button(Messages["toolbar.editMode"]) { toggleEditorMode() })
+        toolbar.add(button(Messages["toolbar.writingMode"]) { toggleMode() })
+        toolbar.add(button(Messages["toolbar.spread"]) { toggleDoublePage() })
+        toolbar.addSeparator()
+        toolbar.add(button(Messages["toolbar.prev"]) { previousPage() })
+        toolbar.add(button(Messages["toolbar.next"]) { nextPage() })
+        toolbar.addSeparator()
+        toolbar.add(button(Messages["toolbar.settings"]) { openSettingsDialog() })
+        toolbar.add(button(Messages["toolbar.chapters"]) { openChapterList() })
+        toolbar.add(button(Messages["toolbar.bookmarks"]) { openBookmarkManager() })
+        toolbar.add(button(Messages["toolbar.library"]) { openLibraryManager() })
+        toolbar.add(button(Messages["toolbar.theme"]) { toggleTheme() })
+        toolbar.add(button(Messages["toolbar.lowkey"]) { toggleLowKey() })
+        toolbar.add(button(Messages["toolbar.help"]) { openHelp() })
     }
 
     private fun button(label: String, action: () -> Unit): JButton =
@@ -390,14 +430,22 @@ private class ReaderPanel(
 
     private fun installKeyBindings() {
         bindGlobal("ESCAPE", "boss-key") { bossKey() }
+        bindGlobal("F1", "help") { openHelp() }
+        bindGlobal("F3", "find-next") { findNextFromShortcut() }
         // Reader-only single-key shortcuts must not swallow typing in the editor.
         // Ctrl+E is provided by the menu accelerator and the editor's own binding.
         bindReader("RIGHT", "next") { nextPage() }
+        bindReader("DOWN", "next") { nextPage() }
         bindReader("PAGE_DOWN", "next") { nextPage() }
         bindReader("SPACE", "next") { nextPage() }
         bindReader("LEFT", "prev") { previousPage() }
+        bindReader("UP", "prev") { previousPage() }
         bindReader("PAGE_UP", "prev") { previousPage() }
         bindReader("BACK_SPACE", "prev") { previousPage() }
+        bindReader("HOME", "first") { goToPage(0, reason = "key") }
+        bindReader("END", "last") { goToPage(pagination.pageCount - 1, reason = "key") }
+        bindReader("control LEFT", "history-back") { goBack() }
+        bindReader("control RIGHT", "history-forward") { goForward() }
         bindReader("E", "edit-mode-reader") { toggleEditorMode() }
         bindReader("e", "edit-mode-reader-lower") { toggleEditorMode() }
         bindReader("V", "vertical") { toggleMode() }
@@ -471,6 +519,7 @@ private class ReaderPanel(
 
     private fun rebuild(anchor: Int?) {
         canvas.cancelAnimation()
+        navigation.clear()
         val anchorOffset = anchor ?: currentAnchor()
         engine = PaginationEngine(text, metrics, mode, pageFont)
         pagination = engine.paginate()
@@ -778,9 +827,7 @@ private class ReaderPanel(
         val pageIndex = pagination.pages.indexOfFirst { offset < it.endOffset }
             .let { if (it < 0) pagination.pageCount - 1 else it }
             .coerceAtLeast(0)
-        spreadStart = if (doublePage) pageIndex - pageIndex % 2 else pageIndex
-        canvas.repaint()
-        updateStatus()
+        goToPage(pageIndex)
         canvas.requestFocusInWindow()
     }
 
@@ -790,7 +837,25 @@ private class ReaderPanel(
         }
         val owner = SwingUtilities.getWindowAncestor(this) as? JFrame ?: return
         println("find dialog: replaceMode=$replaceMode")
-        FindReplaceDialog(owner, editorPane, replaceMode).isVisible = true
+        val dialog = FindReplaceDialog(owner, editorPane, replaceMode)
+        findDialog = dialog
+        dialog.isVisible = true
+    }
+
+    /** F3：沿用上次的搜尋條件；沒有開過就開一個新的尋找視窗。 */
+    private fun findNextFromShortcut() {
+        val dialog = findDialog
+        if (dialog != null && dialog.isDisplayable) {
+            dialog.findNextMatch()
+        } else {
+            openFindDialog(replaceMode = false)
+        }
+    }
+
+    fun openHelp() {
+        val owner = SwingUtilities.getWindowAncestor(this) as? JFrame ?: return
+        println("help dialog: lang=${Messages.currentLanguage}")
+        HelpDialog(owner).isVisible = true
     }
 
     fun enterEditor() {
@@ -869,22 +934,54 @@ private class ReaderPanel(
     }
 
     private fun nextPage() {
-        val step = if (doublePage) 2 else 1
-        var target = (spreadStart + step).coerceAtMost((pagination.pageCount - 1).coerceAtLeast(0))
-        if (doublePage) {
-            target -= target % 2
-        }
-        canvas.animateTo(target)
-        updateStatus()
+        stepPage(1)
     }
 
     private fun previousPage() {
+        stepPage(-1)
+    }
+
+    private fun stepPage(direction: Int, reason: String = "page") {
         val step = if (doublePage) 2 else 1
-        var target = (spreadStart - step).coerceAtLeast(0)
+        goToPage(spreadStart + direction * step, reason = reason)
+    }
+
+    /** 把目標頁對齊跨頁起點（雙頁時一定是偶數頁），並夾在文件範圍內。 */
+    private fun alignedSpread(index: Int): Int {
+        var target = index.coerceIn(0, (pagination.pageCount - 1).coerceAtLeast(0))
         if (doublePage) {
             target -= target % 2
         }
+        return target
+    }
+
+    private fun goToPage(index: Int, animated: Boolean = true, reason: String = "page") {
+        val target = alignedSpread(index)
+        if (target == spreadStart) {
+            updateScrollBar()
+            return
+        }
+        navigation.record(spreadStart, target)
+        if (animated) {
+            canvas.animateTo(target)
+        } else {
+            canvas.jumpTo(target)
+        }
+        println("page ${target + 1}/${pagination.pageCount} ($reason)")
+        updateStatus()
+    }
+
+    private fun goBack() {
+        val target = navigation.back(spreadStart) ?: return
         canvas.animateTo(target)
+        println("history back -> page ${target + 1}/${pagination.pageCount}")
+        updateStatus()
+    }
+
+    private fun goForward() {
+        val target = navigation.forward(spreadStart) ?: return
+        canvas.animateTo(target)
+        println("history forward -> page ${target + 1}/${pagination.pageCount}")
         updateStatus()
     }
 
@@ -1042,13 +1139,14 @@ private class ReaderPanel(
     }
 
     private fun updateStatus() {
+        updateScrollBar()
         if (editing) {
-            statusLeft.text = "編輯模式"
+            statusLeft.text = Messages["status.editor"]
             statusRight.text = ""
             return
         }
         if (document == null) {
-            statusLeft.text = "就緒"
+            statusLeft.text = Messages["status.ready"]
             statusRight.text = ""
             return
         }
@@ -1062,7 +1160,36 @@ private class ReaderPanel(
             total,
             percent,
         )
-        statusLeft.text = if (showBookAndDesktop) "就緒" else "低調模式"
+        statusLeft.text = if (showBookAndDesktop) {
+            Messages["status.ready"]
+        } else {
+            Messages["status.lowkey"]
+        }
+    }
+
+    /**
+     * 右側以「頁」為單位的捲軸：拖到哪一頁就跳到哪一頁。
+     * 雙頁模式的最小可見量是 2，最後一頁是單頁時維持顯示上一頁的跨頁。
+     */
+    private fun updateScrollBar() {
+        val total = pagination.pageCount
+        val visible = !editing && document != null && total > 1
+        if (!pageScroll.isVisible && visible) {
+            pageScroll.isVisible = true
+        } else if (pageScroll.isVisible && !visible) {
+            pageScroll.isVisible = false
+        }
+        if (!visible) return
+        val extent = if (doublePage) 2 else 1
+        syncingScroll = true
+        try {
+            pageScroll.maximum = total
+            pageScroll.visibleAmount = extent
+            pageScroll.blockIncrement = extent
+            pageScroll.value = spreadStart.coerceIn(0, (total - extent).coerceAtLeast(0))
+        } finally {
+            syncingScroll = false
+        }
     }
 
     private inner class BookCanvas : JPanel() {
@@ -1078,6 +1205,7 @@ private class ReaderPanel(
                         if (next) {
                             spreadStart -= spreadStart % 2
                         }
+                        updateScrollBar()
                         repaint()
                     }
                 },
@@ -1112,10 +1240,28 @@ private class ReaderPanel(
                     override fun mouseClicked(event: MouseEvent) {
                         if (event.clickCount == 2 && document == null) {
                             openFileDialog()
+                            return
+                        }
+                        if (event.button != MouseEvent.BUTTON1 || event.clickCount != 1) return
+                        if (document == null) return
+                        requestFocusInWindow()
+                        if (pageClickTurnsForward(event.x, width, mode)) {
+                            stepPage(1, "click")
+                        } else {
+                            stepPage(-1, "click")
                         }
                     }
                 },
             )
+            addMouseWheelListener { event ->
+                if (document == null) return@addMouseWheelListener
+                when {
+                    event.wheelRotation > 0 -> stepPage(1, "wheel")
+                    event.wheelRotation < 0 -> stepPage(-1, "wheel")
+                    else -> return@addMouseWheelListener
+                }
+                event.consume()
+            }
         }
 
         fun animateTo(target: Int) {
@@ -1154,6 +1300,13 @@ private class ReaderPanel(
             animationKind = PageTurnAnimation.NONE
             oldFrame = null
             newFrame = null
+        }
+
+        /** 捲軸拖曳等即時操作：不播動畫，直接換頁。 */
+        fun jumpTo(target: Int) {
+            cancelAnimation()
+            spreadStart = target
+            repaint()
         }
 
         private fun finishAnimation() {
@@ -1292,3 +1445,18 @@ private const val PAGE_TURN_DURATION_NS = 220_000_000L
  */
 internal fun pageTurnForward(mode: WritingMode, from: Int, to: Int): Boolean =
     if (mode == WritingMode.VERTICAL) to < from else to > from
+
+/**
+ * 滑鼠點擊哪一半算「下一頁」。
+ *
+ * 橫排（左翻書）點右半頁往後翻；直排（右翻書）點左半頁往後翻，
+ * 與 `pageTurnForward` 的方向一致。
+ */
+internal fun pageClickTurnsForward(x: Int, width: Int, mode: WritingMode): Boolean {
+    if (width <= 0) return false
+    return if (mode == WritingMode.VERTICAL) {
+        x < width / 2
+    } else {
+        x >= width / 2
+    }
+}

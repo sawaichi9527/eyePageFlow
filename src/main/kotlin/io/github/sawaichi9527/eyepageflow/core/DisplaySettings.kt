@@ -33,6 +33,10 @@ data class DisplaySettings(
     val desktopPatternId: String = "desktop.wood-dark",
     val coverPatternId: String = "cover.leather-brown",
     val pagePatternId: String = "page.paper-cream",
+    /** 自訂圖片路徑；空字串表示使用圖案／純色。 */
+    val desktopImage: String = "",
+    val coverImage: String = "",
+    val pageImage: String = "",
     val desktopColor: Int = 0x2B211B,
     val coverColor: Int = 0x6B4A2F,
     val pageColor: Int = 0xF3E9D2,

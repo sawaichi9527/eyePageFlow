@@ -19,11 +19,11 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 - JBR 21 原生 Wayland 啟動驗證。
 - `jlink` + `jpackage app-image` 打包驗證。
 
-已完成：開檔／存檔、原編碼／BOM 保留、無法表示字元的 UTF-8／UTF-16LE fallback、命令列開檔、拖放開檔、空白狀態（logo＋雙擊開檔）、顯示設定（表單、字體家族、顏色、內置圖案、配色方案、中縫、即時預覽）、整頁下劃線、翻頁動畫、基本編輯模式（RSyntaxTextArea、dirty、閱讀／編輯切換、尋找／取代、單頁書本外觀、undo/redo 100）、章節列表（可切換規則、目前章節標示）、書籤管理、最近開啟檔案、書庫／檔案列表、老闆鍵（無托盤時最小化）、單一實例（第二次啟動把檔案送到既有視窗）、關窗提示、設定持久化（XDG／AppData）。
+已完成：開檔／存檔、原編碼／BOM 保留、無法表示字元的 UTF-8／UTF-16LE fallback、命令列開檔、拖放開檔、空白狀態（logo＋雙擊開檔）、顯示設定（表單、字體家族、顏色、內置圖案、自訂圖片、配色方案、中縫、即時預覽）、整頁下劃線、翻頁動畫、基本編輯模式（RSyntaxTextArea、dirty、閱讀／編輯切換、尋找／取代、單頁書本外觀、undo/redo 100）、章節列表（可切換規則、目前章節標示）、書籤管理、最近開啟檔案、書庫／檔案列表、老闆鍵（無托盤時最小化）、單一實例（第二次啟動把檔案送到既有視窗）、關窗提示、設定持久化（XDG／AppData）。
 
-本次 Session 已完成的 UI 行為變更（皆有實機證據，見上）：翻頁方向與半頁掃描、顯示預設值定案、自動恢復閱讀位置、編輯模式空白鍵。
+本次 Session 補上（皆有測試或啟動證據）：滑鼠左右半區翻頁、滾輪、右側頁面捲軸、Home／End 與 ↑／↓、Ctrl+←／Ctrl+→ 閱讀歷程、F3 尋找下一個、F1 使用說明、編輯選單與工具列的剪貼／復原／書籤／說明，以及 `Messages` 多語系架構（繁中預設、英文／日文可切換）。
 
-尚未完成：檔案關聯註冊、剪貼簿的 GUI 互動驗證、Ubuntu 24.04 的 Wayland session、`.desktop` 實際安裝。Windows 變更顯示縮放後需最大化一次才會重繪，列為已知問題。
+尚未完成：檔案關聯註冊、剪貼簿的 GUI 互動驗證、Ubuntu 24.04 的 Wayland session、`.desktop` 實際安裝、黑絨桌面圖案、對話框的英日翻譯。Windows 變更顯示縮放後需最大化一次才會重繪，列為已知問題。
 
 ## 平台
 
@@ -67,9 +67,10 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 # 直接開啟檔案
 ./scripts/gradlew-local.sh run --args="/path/to/novel.txt"
 
-# 直接進編輯模式／顯示設定
+# 直接進編輯模式／顯示設定／使用說明
 ./scripts/gradlew-local.sh run --args="--editor"
 ./scripts/gradlew-local.sh run --args="--settings"
+./scripts/gradlew-local.sh run --args="--guide"
 
 # 產生直排／橫排 PNG
 ./scripts/gradlew-local.sh run --args="--render build/prototype"
@@ -156,13 +157,13 @@ Linux（Ubuntu 26.04.1 LTS x86_64、Wayland、JBR 21.0.11）：
   - 直排：8,375 頁、657.0–715.2 ms
 - 原生 Wayland：`toolkit=sun.awt.wl.WLToolkit`
 - XWayland 路徑：`toolkit=sun.awt.X11.XToolkit`
-- 測試：`./scripts/gradlew-local.sh test --rerun-tasks` 通過（131 tests、30 suites、0 failures）
+- 測試：`./scripts/gradlew-local.sh test --rerun-tasks` 通過（150 tests、34 suites、0 failures）
 - UI 文字：`Noto Sans CJK TC 15pt`（JBR Wayland 原本只算出 13pt）
 - 排版：`startup typography: fontSize=26.0 font=Noto Serif CJK TC/26`、20 欄／頁
 
 Ubuntu 24.04.5 LTS 原生 X11（VMware Workstation、2 vCPU、Temurin 21.0.12+8、JBR 21.0.11、`X.Org 21.1.11`）：
 
-- 測試：`./scripts/gradlew-local.sh test --rerun-tasks` 通過（該日 125 tests、29 suites；現行基準為 131 tests）
+- 測試：`./scripts/gradlew-local.sh test --rerun-tasks` 通過（該日 125 tests、29 suites；現行基準為 150 tests）
 - 啟動：`toolkit=sun.awt.X11.XToolkit`；`loginctl` 為 `Type=x11`，`Xorg` 是獨立行程（非 XWayland）
 - 開檔：`encoding=Big5 chars=134 pages=1`；渲染橫排 11 頁、直排 12 頁（與 Windows 相同）
 - 打包：`./scripts/package-linux.sh` 通過（app-image 94 MB、tar.gz、打包後 Big5 smoke test 通過）

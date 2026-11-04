@@ -9,6 +9,7 @@ import java.awt.Color
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
@@ -157,8 +158,26 @@ class RenderRegressionTest {
         )
     }
 
-    // --- helpers -----------------------------------------------------------
+    @Test
+    fun `custom page image replaces the page texture`() {
+        val file = java.nio.file.Files.createTempFile("epf-page-image", ".png")
+        try {
+            val swatch = BufferedImage(8, 8, BufferedImage.TYPE_INT_RGB)
+            val swatchGraphics = swatch.createGraphics()
+            swatchGraphics.color = Color(0x00, 0xC0, 0x00)
+            swatchGraphics.fillRect(0, 0, 8, 8)
+            swatchGraphics.dispose()
+            javax.imageio.ImageIO.write(swatch, "png", file.toFile())
 
+            val themed = theme.copy(pageImage = file.toString())
+            val page = render("檔", metrics, themed)
+            assertEquals(0xFF00C000.toInt(), page.image.getRGB(2, 2))
+        } finally {
+            java.nio.file.Files.deleteIfExists(file)
+        }
+    }
+
+    // --- helpers -----------------------------------------------------------
     /**
      * 單一字的字格：寬度固定一個字，高度用該字實際的前進量。
      * 旋倒的半角字只有 `cellHeight`（約半個字），不能套 `fontSize`。
@@ -187,6 +206,7 @@ class RenderRegressionTest {
     private fun render(
         text: String,
         pageMetrics: PageMetrics,
+        renderTheme: Theme = theme,
     ): RenderedPage {
         val engine = PaginationEngine(text, pageMetrics, WritingMode.VERTICAL, font)
         val pagination = engine.paginate()
@@ -203,7 +223,7 @@ class RenderRegressionTest {
             engine = engine,
             pagination = pagination,
             spreadStart = 0,
-            theme = theme,
+            theme = renderTheme,
             doublePage = false,
             showBookAndDesktop = false,
             font = font,

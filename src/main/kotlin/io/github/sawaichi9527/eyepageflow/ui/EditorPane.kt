@@ -113,6 +113,22 @@ class EditorPane(
         }
     }
 
+    fun cut() {
+        textArea.cut()
+    }
+
+    fun copy() {
+        textArea.copy()
+    }
+
+    fun paste() {
+        textArea.paste()
+    }
+
+    fun selectAll() {
+        textArea.selectAll()
+    }
+
     fun find(
         searchFor: String,
         matchCase: Boolean = false,
