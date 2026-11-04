@@ -363,6 +363,11 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 | `./scripts/package-linux.sh` | 0 | app-image 94 MB、`.desktop`、`eyePageFlow-0.1.0-linux-x64.tar.gz`；**打包後 Big5 smoke test 通過** | `/tmp/epf-pkg.log`、`build/package/` |
 | `runtime/bin/java --list-modules` | 0 | 含 `jdk.charsets@21.0.11`（`jdk.charsets` 修正已在 Linux 生效） | `/tmp/epf-pkg.log` |
 | `lib/app/eyePageFlow.cfg` | — | 只有 `-Djpackage.app-version`，未寫死 `awt.toolkit.name` | `/tmp/epf-pkg.log` |
+| tar.gz 解開後 `eyePageFlow --benchmark` | 0 | 解碼 118.0 ms、橫排 422.1 ms／7,724 頁、直排 606.5 ms／8,375 頁（Big5 正常） | `/tmp/epf-appimage.log` |
+| tar.gz 解開後啟動 GUI | 執行中 | `java=21.0.11 (JetBrains s.r.o.)`（JBR）、`toolkit=sun.awt.X11.XToolkit`、`page font: ... (embedded=true)`、`opened ... encoding=Big5` | `/tmp/epf-dist-gui.txt`、截圖 `vm-targz-shot.png` |
+| `APPIMAGE_EXTRACT_AND_RUN=1 ./scripts/package-appimage.sh` | 0 | 產出 `eyePageFlow-0.1.0-x86_64.AppImage`（67 MB） | `/tmp/epf-appimage.log` |
+| AppImage `--appimage-extract` + `AppRun --benchmark` | 0 | 解碼 118.5 ms、橫排 420.8 ms、直排 748.1 ms | `/tmp/epf-appimage.log` |
+| **AppImage 直接執行**（`./eyePageFlow-0.1.0-x86_64.AppImage --benchmark`） | 0 | 解碼 143.6 ms、橫排 576.7 ms、直排 805.2 ms；**執行後檔案仍在**（67 MB） | `/tmp/epf-appimg2.log` |
 
 分頁時間（2 vCPU VM，同一份 10 MiB Big5、7,724／8,375 頁）：
 
@@ -379,9 +384,9 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 
 尚未在 Ubuntu 24.04 驗證：
 
-- AppImage 打包（`appimagetool` 未放進這台 VM）。
 - Ubuntu 24.04 的 Wayland session（這台刻意設成 Xorg）。
-- GUI 互動（IME、縮放、拖放）——只驗到「能啟動、能開 Big5、直排畫面正確」。
+- Ubuntu 24.04 的 GUI 互動（IME、縮放、拖放）——只驗到「能啟動、能開 Big5、直排畫面正確」。
+- `.desktop` 實際安裝到 `~/.local/share/applications`（會改動使用者環境）。
 
 ### Windows GUI 互動驗證（2026-11-04）
 
@@ -536,7 +541,7 @@ JBR 下載與 checksum：
 - 章節規則、書籤、書庫與老闆鍵已可用；托盤在目前 GNOME／Wayland 不可用，老闆鍵以最小化替代。
 - 編輯模式空白鍵仍是插入空白，尚未照原作改成「下一頁」。
 - 檔案關聯註冊尚未實作；目前依靠命令列參數與單一實例轉送。
-- **AppImage 在這台環境執行後會自我刪除**：`appimagetool` continuous build（4919cc4）在此沙箱跑 FUSE fallback 時，離開後會把 `.AppImage` 本體移除。用最小 AppDir 重打包也重現，所以不是本專案打包內容的問題；一般桌面環境尚未驗證。內容正確性已用 `--appimage-extract` + `AppRun` 驗過。
+- **AppImage 在這台環境執行後會自我刪除**：`appimagetool` continuous build（4919cc4）在此沙箱跑 FUSE fallback 時，離開後會把 `.AppImage` 本體移除。用最小 AppDir 重打包也重現，所以不是本專案打包內容的問題。**2026-11-04 在 Ubuntu 24.04（`/dev/fuse` 正常、`fusermount3` 存在）直接執行同一份 AppImage 則完全正常，檔案也保留**，因此判定為原沙箱環境問題，一般桌面不受影響。
 - 檔案關聯的 `.desktop` 已產生並通過 `desktop-file-validate`，但**尚未安裝**到 `~/.local/share/applications`（會改動使用者環境，需另外確認）。
 - Windows 不提供 MSI／安裝檔（使用者指定只要可攜式 zip，解開即可執行）；jpackage 的 MSI 另外需要 WiX Toolset。
 - Ubuntu 26.04 的 X11 session 不是預設，尚未測試。

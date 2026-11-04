@@ -164,6 +164,7 @@ Ubuntu 24.04.5 LTS 原生 X11（VMware Workstation、2 vCPU、Temurin 21.0.12+8�
 - 啟動：`toolkit=sun.awt.X11.XToolkit`；`loginctl` 為 `Type=x11`，`Xorg` 是獨立行程（非 XWayland）
 - 開檔：`encoding=Big5 chars=134 pages=1`；渲染橫排 11 頁、直排 12 頁（與 Windows 相同）
 - 打包：`./scripts/package-linux.sh` 通過（app-image 94 MB、tar.gz、打包後 Big5 smoke test 通過）
+- 可攜式產物：tar.gz 解開可直接執行（JBR `21.0.11`、`toolkit=sun.awt.X11.XToolkit`）；AppImage 67 MB 可直接執行，執行後檔案保留
 - Benchmark：典型 390–725 ms；2 vCPU VM 偶有 982–1,686 ms 的環境抖動
 
 Windows（Windows 10 x64、Temurin 21.0.12+8、Gradle 9.5.0）：
