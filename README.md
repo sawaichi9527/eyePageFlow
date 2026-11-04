@@ -151,18 +151,18 @@ build/package/eyePageFlow-0.1.0-x86_64.AppImage
 
 Linux（Ubuntu 26.04.1 LTS x86_64、Wayland、JBR 21.0.11）：
 
-- Benchmark（2026-11-03，commit `0fcfbdd`）：10 MiB Big5、5,934,667 字、解碼 130.2 ms
-  - 橫排：7,779 頁、300.7 ms
-  - 直排：8,323 頁、447.4 ms
+- Benchmark（2026-11-04，commit `bed4ab5`）：10 MiB Big5、5,934,667 字、解碼 135.2–135.7 ms
+  - 橫排：7,724 頁、388.0–436.9 ms
+  - 直排：8,375 頁、657.0–715.2 ms
 - 原生 Wayland：`toolkit=sun.awt.wl.WLToolkit`
 - XWayland 路徑：`toolkit=sun.awt.X11.XToolkit`
-- 測試：`./scripts/gradlew-local.sh test` 通過（111 tests，0 failures）
+- 測試：`./scripts/gradlew-local.sh test --rerun-tasks` 通過（131 tests、30 suites、0 failures）
 - UI 文字：`Noto Sans CJK TC 15pt`（JBR Wayland 原本只算出 13pt）
 - 排版：`startup typography: fontSize=26.0 font=Noto Serif CJK TC/26`、20 欄／頁
 
 Ubuntu 24.04.5 LTS 原生 X11（VMware Workstation、2 vCPU、Temurin 21.0.12+8、JBR 21.0.11、`X.Org 21.1.11`）：
 
-- 測試：`./scripts/gradlew-local.sh test --rerun-tasks` 通過（125 tests、29 suites、0 failures）
+- 測試：`./scripts/gradlew-local.sh test --rerun-tasks` 通過（該日 125 tests、29 suites；現行基準為 131 tests）
 - 啟動：`toolkit=sun.awt.X11.XToolkit`；`loginctl` 為 `Type=x11`，`Xorg` 是獨立行程（非 XWayland）
 - 開檔：`encoding=Big5 chars=134 pages=1`；渲染橫排 11 頁、直排 12 頁（與 Windows 相同）
 - 打包：`./scripts/package-linux.sh` 通過（app-image 94 MB、tar.gz、打包後 Big5 smoke test 通過）

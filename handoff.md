@@ -8,9 +8,9 @@
 
 顯示設定、空白狀態、雙擊開檔、翻頁動畫與整頁下劃線已完成；編輯模式已接上 RSyntaxTextArea，可切換閱讀／編輯、偵測 dirty、存檔同步、尋找／取代、單頁書本外觀與 undo/redo 100 上限，並有關窗未儲存提示。章節列表支援可切換規則與目前章節標示；顯示設定、章節規則、書籤、最近開啟檔案與書庫會存到 XDG／AppData。檔案列表、書庫管理、老闆鍵（最小化）與單一實例已完成。尚未完成檔案關聯註冊；Windows GUI 互動與 Ubuntu 24.04 原生 X11 已於 2026-11-04 驗證。
 
-Ubuntu 26.04 Wayland 已完成本輪回歸：67 個測試、benchmark、渲染快照、JBR 原生 Wayland／XWayland 啟動與 Big5 開檔皆通過；過程中修掉一個只在 Linux 失敗的字型相依測試。
+Ubuntu 26.04 Wayland 已完成本輪回歸（2026-11-04，基準 `bed4ab5`）：131 個測試、benchmark 388–437／657–715 ms、渲染 11／12 頁、JBR 原生 Wayland（`WLToolkit`）與強制 XToolkit 啟動、Big5 開檔、閱讀位置恢復、`package-linux.sh` 打包皆通過。
 
-Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 到 `.local/jdk-21`）與 `scripts/gradlew-local.ps1`（`JAVA_HOME`／`GRADLE_USER_HOME` 隔離於 `.local/`）。2026-11-04 已在 Windows 追平遠端 9 個 commit 並完成回歸：111 個測試、渲染、benchmark、GUI 啟動（`WToolkit`、內嵌字型）、托盤與可攜式 zip 打包皆通過；頁數與 Linux 完全一致。
+Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 到 `.local/jdk-21`）與 `scripts/gradlew-local.ps1`（`JAVA_HOME`／`GRADLE_USER_HOME` 隔離於 `.local/`）。2026-11-04 已在 Windows 追平遠端 9 個 commit 並完成回歸：131 個測試、渲染、benchmark、GUI 啟動（`WToolkit`、內嵌字型）、托盤與可攜式 zip 打包皆通過；頁數與 Linux 完全一致。
 
 ## Completed
 
@@ -74,7 +74,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - `platform/SingleInstance.kt`：檔案鎖＋loopback socket；第二次啟動把檔案送到既有視窗。
 - 關窗未儲存提示。
 - `EditorPaneTest`：程式設定文字不觸發 dirty；插入文字會觸發 dirty；find／replace／replaceAll 正常。
-- 測試：111 個測試，0 失敗（Windows 與 Ubuntu 26.04 Wayland；含 4 個書頁渲染回歸測試）。
+- 測試：131 個測試、30 suites，0 失敗（Windows 10、Ubuntu 24.04 X11、Ubuntu 26.04 Wayland；含 4 個書頁渲染回歸測試）。
 - 直排「數字壓在字上」的修正，分兩層：
   1. `BookRenderer.drawGlyph`：直排時把**行框在字格內垂直置中**。字格高 = 字號，但字型 ascent + descent 更大（Noto Serif CJK 26px 為 38px），沿用基線會讓每個字的墨跡往下溢 6px、壓到下一個字（`第10段` 的數字就是被 `第` 壓住）。
   2. `Pagination.verticalAdvance`：旋倒的半角字維持依字寬前進（`UTF-8` 不會被拉長），但下限由 0.3em 提到 0.5em，避免 `1`、`.` 的旋倒墨跡比字格高。
@@ -92,7 +92,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - 版面模式：`DisplaySettings.doublePageFor()` 讓 AUTO 依畫布寬高比（≥1.25）自動單／雙頁，`BookCanvas` 在視窗縮放時即時切換；EQUAL_HEIGHT 交給 `BookRenderer` 的 `scaleToPageHeight`，只依高度縮放，雙頁字級與單頁相同。
 - 直排字距微調：`PageMetrics.cellSpacing` 與橫排的 `lineSpacing` 對稱，把欄內剩餘高度平均分配（上限 5%）。
 - 行距微調：`PageMetrics.lineSpacing` 把一頁放不滿的剩餘高度平均分配給各行（最多放寬 5%），`PageUnderlines` 用同一組間距畫線；直排仍固定 1em 字格。
-- 孤行控制：`Pagination.avoidOrphanLine()` 不讓某段的第一行單獨留在頁面最下方（頁面至少還有一行、且該段還有後續時，把這一行移到下一頁）。橫排／直排都適用。寡行（段末行單獨落在下一頁頂端）尚未處理。
+- 孤行控制：`Pagination.avoidOrphanLine()` 不讓某段的第一行單獨留在頁面最下方（頁面至少還有一行、且該段還有後續時，把這一行移到下一頁）。橫排／直排都適用；寡行（段末行單獨落在下一頁頂端）由 `avoidWidowLine()` 處理。
 - 材質快取：`TexturePainter` 把材質依（寬、高、底色、種類）快取成點陣圖，LRU 上限 6 M 像素（約 24 MB）。實測 20 次材質繪製由 254 ms 降到 80 ms（JIT 暖機後）。
 - 應用程式圖示：`--icon <path>` 產生 512×512 透明背景 PNG（`AppIcon` + `EmptyStateRenderer.renderIcon`，自製書頁 logo，無外部素材）。
 - AppImage：`scripts/package-appimage.sh` 把 app-image 組成 AppDir（`AppRun`＋`.desktop`＋`.png`）後用 `appimagetool` 打包，產出 `build/package/eyePageFlow-0.1.0-x86_64.AppImage`（44 MB）。
@@ -122,7 +122,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 ### P0 收尾（約半天）
 
 1. ~~Windows GUI 互動驗證~~（已完成 2026-11-04：IME 中英輸入、125%／150% 縮放、關窗未存提示、拖放、檔案對話框、書籤、書庫、編輯功能皆由使用者實機確認。縮放後需放大視窗才會重繪，列為已知問題）。剪貼簿未單獨確認。
-2. ~~文件同步~~（已完成：README／handoff 的測試數與 benchmark 數據已更新到 125 tests 與現況；殘存的舊數字只出現在有標日期的歷史驗證表，屬於當時紀錄）。
+2. ~~文件同步~~（已完成：README／handoff 的測試數與 benchmark 數據已更新到 131 tests 與現況；殘存的舊數字只出現在有標日期的歷史驗證表，屬於當時紀錄）。
 3. ~~定案顯示預設值~~（已完成 2026-11-04：字級 26、直排標點置中、下劃線**淡（0.5）**、其餘維持原預設。`DisplayDefaultsTest` 4 個測試鎖住這組值）。
 
 ### P1 排版正確性（M3，約 1–2 天）
@@ -137,7 +137,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 9. ~~Windows 可攜式 zip~~（已完成：`scripts/package-windows.ps1`，55.7 MB，解開即可執行；**不提供 MSI**，使用者已明確排除安裝檔）。檔案關聯註冊仍未做。
 10. ~~Linux AppImage~~（已產出；`appimagetool` 放在 `.local/tools/`，未納入版控）。
-11. ~~Ubuntu 26.04 Wayland 回歸~~（已完成：67 tests、benchmark、渲染、WLToolkit／XToolkit、Big5 開檔；清單見 `docs/linux-regression.md`）。Ubuntu 24.04 原生 X11 已延後至 P3。
+11. ~~Ubuntu 26.04 Wayland 回歸~~（已完成 2026-11-04：131 tests、benchmark、渲染、WLToolkit／XToolkit、Big5 開檔、閱讀位置恢復與打包；清單見 `docs/linux-regression.md`）。Ubuntu 24.04 原生 X11 已於同日完成。
 
 ### P3 體驗
 
@@ -459,6 +459,37 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 | 編輯功能 | 通過 | 閱讀／編輯切換、存檔、dirty 標記正常 |
 
 未單獨確認：剪貼簿（複製／貼上）、單一實例轉送在 GUI 互動下的行為、Ubuntu 端的 GUI 互動。
+
+### Ubuntu 26.04 Wayland 回歸（2026-11-04，基準 `bed4ab5`）
+
+環境：Ubuntu `26.04.1 LTS` x86_64、`XDG_SESSION_TYPE=wayland`、`WAYLAND_DISPLAY=wayland-0`、Temurin `21.0.12+8`（建置／測試）、JBR `21.0.11`（GUI）、Gradle `9.5.0`、4 vCPU。
+本輪是 Windows 端 13 個 commit（`110940a` → `bed4ab5`）在本機的第一次完整回歸。
+
+| 指令 | Exit | Duration | 結果 | 證據 |
+|---|---|---|---|---|
+| `./scripts/gradlew-local.sh test --rerun-tasks` | 0 | 56s | **131 tests、30 suites、0 failures、0 errors、0 skipped**（與 Windows 相同） | `/tmp/opencode/wayland-close-test.log`、`build/test-results/test/` |
+| `./scripts/gradlew-local.sh check` | 0 | 1s | BUILD SUCCESSFUL | `/tmp/opencode/wayland-close-check.log` |
+| `./scripts/gradlew-local.sh run --args="--render /tmp/opencode/wayland-close-render"` | 0 | 19s | 橫排 11 頁／543.8 ms、直排 12 頁／225.4 ms、3,761 字（與 Windows 相同） | `/tmp/opencode/wayland-close-render/*.png`、`wayland-close-render.log` |
+| `./scripts/gradlew-local.sh run --args="--benchmark"`（第 2 次，單獨執行） | 0 | — | 解碼 135.2 ms、橫排 388.0 ms／7,724 頁、直排 715.2 ms／8,375 頁 | `/tmp/opencode/wayland-close-benchmark2.log` |
+| 同上（第 3 次） | 0 | — | 解碼 135.7 ms、橫排 436.9 ms／7,724 頁、直排 657.0 ms／8,375 頁 | `/tmp/opencode/wayland-close-benchmark3.log` |
+| `installDist` + JBR 原生 Wayland 啟動（自製 Big5 檔 14,738 bytes） | 124（timeout 終止，GUI 常駐） | — | `toolkit=sun.awt.wl.WLToolkit`、`ui font: Noto Sans CJK TC 15pt`、`page font: Noto Serif CJK TC (embedded=true)`、`opened ... encoding=Big5 chars=8018 pages=15`、`tray: not supported` | `/tmp/opencode/wayland-gui.log` |
+| `--settings`（全新 `XDG_CONFIG_HOME`） | 124（同上） | — | `display settings: theme=realistic layout=AUTO pageWidth=900 fontSize=26.0 underline=false underlineWidth=0.5 punctuation=CENTER`（與 Windows 定案值相同） | `/tmp/opencode/wayland-defaults.log` |
+| 預先寫入 `reading-positions.properties` 後開同檔 | 124（同上） | — | `resumed epf-wayland-big5.txt at page 9/15 offset=5000` | `/tmp/opencode/wayland-resume.log` |
+| `--demo`（自動翻頁） | 124（同上） | — | `demo page 3/15` → `5/15` → `7/15` → 回翻 `5/15` → `3/15`，無例外（前翻／回翻兩種動畫都走到） | `/tmp/opencode/wayland-demo.log` |
+| `EYEPAGEFLOW_TOOLKIT=XToolkit` 啟動 | 124（同上） | — | `toolkit=sun.awt.X11.XToolkit`、`opened ... pages=15`（XWayland，非原生 X11） | `/tmp/opencode/xwayland.log` |
+| `./scripts/package-linux.sh` | 0 | — | app-image、`.desktop`（`desktop-file-validate` exit 0）、`eyePageFlow-0.1.0-linux-x64.tar.gz` 65 MB | `/tmp/opencode/wayland-package.log` |
+| `lib/runtime/bin/java --list-modules` | 0 | — | 含 `jdk.charsets@21.0.11`（`ba9acd2` 的修正生效） | 終端輸出 |
+| `lib/app/eyePageFlow.cfg` | — | — | 只有 `-Djpackage.app-version=0.1.0`，未寫死 `awt.toolkit.name` | 終端輸出 |
+| 打包後 app-image 啟動（JBR） | 124（同上） | — | `toolkit=sun.awt.wl.WLToolkit`、`page font: ... (embedded=true)`、`opened ... encoding=Big5 pages=15` | `/tmp/opencode/wayland-pkg-gui.log` |
+
+第一次 `--benchmark` 與 `--render` 並行執行時超標（橫排 914.3 ms、直排 1,418.9 ms，exit 1）；`uptime` 顯示 load average > 3（4 vCPU，兩個 JVM 加上 Gradle daemon 搶 CPU）。單獨重跑兩次都回到 388–437／657–715 ms，頁數與 Windows 相同，判定為測試執行方式造成的競爭，不是分頁退步。
+
+尚未在 Ubuntu 26.04 驗證（本輪未執行）：
+
+- 剪貼簿、Wayland 下的 IME 與拖放（需要真人操作；Windows 端已由使用者確認）。
+- `.desktop` 實際安裝到 `~/.local/share/applications`（會改動使用者環境）。
+- 10 MiB 以上檔案、20 MiB 上限、編輯器 10 MiB 輸入延遲（M7）。
+- AppImage 本輪未重打（24.04 已驗證 `APPIMAGE_EXTRACT_AND_RUN=1` 與直接執行）。
 
 ### 內嵌字型與捲頁（2026-11-04）
 

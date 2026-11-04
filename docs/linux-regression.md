@@ -1,16 +1,19 @@
 # Linux 回歸清單
 
-這份清單給 Ubuntu 開發機（`Ubuntu 26.04 / Wayland`）使用。基準 commit：`e168686`（2026-11-04）。
+這份清單給 Ubuntu 開發機（`Ubuntu 26.04 / Wayland`）使用。基準 commit：`bed4ab5`（2026-11-04）。
 
 > Ubuntu 24.04 原生 X11 已於 2026-11-04 在 VMware VM 上完成（見 `handoff.md`）。
 > 該 VM 固定 `WaylandEnable=false`，所以 24.04 的 Wayland session 仍未驗證。
+> Ubuntu 26.04 Wayland 已於 2026-11-04 晚間跑完這份清單（131 tests、benchmark、渲染、
+> `WLToolkit`／強制 `XToolkit`、Big5 開檔、閱讀位置恢復、`package-linux.sh` 全部通過），
+> 未做的項目見 `handoff.md` 的「Ubuntu 26.04 Wayland 回歸」段落。
 
 ## 0. 取得程式
 
 ```bash
 git clone https://github.com/sawaichi9527/eyePageFlow.git
 cd eyePageFlow
-git log -1 --oneline          # 應為 e168686 或之後
+git log -1 --oneline          # 應為 bed4ab5 或之後
 ```
 
 ## 1. 工具鏈
@@ -28,7 +31,7 @@ git log -1 --oneline          # 應為 e168686 或之後
 ./scripts/gradlew-local.sh check
 ```
 
-**預期：125 tests、29 suites、0 failures、0 errors、0 skipped**（2026-11-04 在 Windows 與 Ubuntu 24.04 X11 都是這個數字）。若有失敗，請把失敗的測試名稱貼回來。
+**預期：131 tests、30 suites、0 failures、0 errors、0 skipped**（2026-11-04 在 Windows、Ubuntu 24.04 X11 與 Ubuntu 26.04 Wayland 都是這個數字）。若有失敗，請把失敗的測試名稱貼回來。
 
 ## 3. 效能基準
 
@@ -95,7 +98,7 @@ JAVA_HOME="$PWD/.local/jbr-21" build/install/eyePageFlow/bin/eyePageFlow
 （這一步是在抓 `jlink` 忘了 `jdk.charsets` 會讓打包版失去 Big5 的回歸）。
 
 ```bash
-build/package/eyePageFlow/runtime/bin/java --list-modules | grep jdk.charsets   # 必須有
+build/package/eyePageFlow/lib/runtime/bin/java --list-modules | grep jdk.charsets   # 必須有
 grep awt.toolkit build/package/eyePageFlow/lib/app/eyePageFlow.cfg              # 應該沒有輸出
 ```
 
