@@ -308,6 +308,42 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 - Ubuntu 24.04 原生 X11（已延後至 P3）。
 - 拖放、IME、縮放、剪貼簿、編輯存檔、關窗提示等需要真人操作的項目。
 
+### Session close（2026-11-04 16:51 CST）
+
+環境：Windows 10 IoT 企業版 LTSC 21H2 x64（`10.0.19044`）、Temurin `21.0.12+8`、Gradle `9.5.0`、`sun.awt.windows.WToolkit`。
+基準 commit：`4e337b6`（工作樹乾淨，`main` 與 `origin/main` 同步）。
+
+| 指令 | Exit | Duration | 結果 | 證據 |
+|---|---|---|---|---|
+| `.\scripts\gradlew-local.ps1 test --rerun-tasks` | 0 | 20s | **131 tests、30 suites、0 failures、0 errors、0 skipped** | `%TEMP%\opencode\close-test.log`、`build\test-results\test\` |
+| `.\scripts\gradlew-local.ps1 check` | 0 | 1s | BUILD SUCCESSFUL | 終端輸出 |
+| `.\scripts\gradlew-local.ps1 run --args="--render build/prototype"` | 0 | 3s | 橫排 11 頁、直排 12 頁、3,761 字（與 Ubuntu 24.04、Linux 一致） | `build\prototype\*.png` |
+| `.\scripts\gradlew-local.ps1 run --args="--benchmark"` | 0 | 3s | 10 MiB、5,934,667 字、解碼 144.4 ms、橫排 386.5 ms／7,724 頁、直排 485.8 ms／8,375 頁 | `%TEMP%\opencode\close-benchmark.log` |
+
+本次 Session 的提交（Windows 打包 → 翻頁方向 → 顯示預設 → Ubuntu 24.04 X11 → 閱讀位置 → 空白鍵）：
+
+- `ba9acd2` fix: keep legacy charsets in the packaged runtime
+- `6ed6719` feat: add portable Windows packaging with a real .ico icon
+- `4bc75aa` fix: turn pages in the reading direction of the writing mode
+- `1df82e1` docs: record the Windows GUI verification results
+- `af6f6dd` feat: finalize the display defaults with a faint underline
+- `46c35a4` docs: record the Ubuntu 24.04 native X11 regression
+- `e168686` docs: verify the Linux deliverables on Ubuntu 24.04 X11
+- `c07e717` docs: refresh the Linux regression checklist for the current build
+- `5ed68ab` docs: drop stale known issues and close the doc-sync item
+- `cc0d761` feat: resume each file at the last reading position
+- `7bdfc9c` docs: record the reading-position resume run
+- `497d6be` feat: make space turn the page in the editor
+- `4e337b6` docs: record the editor space-key run and close the gap
+
+本次 Session 未驗證（明確清單）：
+
+- Ubuntu 26.04 Wayland 的**本輪**回歸（基準已從 `0fcfbdd` 推進到 `4e337b6`，使用者安排於晚間執行，清單是 `docs/linux-regression.md`）。
+- Ubuntu 24.04 的 Wayland session（VM 固定 Xorg）。
+- Windows 剪貼簿 GUI 互動、檔案關聯註冊、`.desktop` 實際安裝。
+- 10 MiB 以上檔案、20 MiB 上限、編輯器 10 MiB 輸入延遲（M7）。
+- 本輪為文件與 UI 行為變更，未執行壓力測試、未觸及硬體。
+
 ### Windows 回歸與可攜式打包（2026-11-04）
 
 環境：Windows 10 IoT 企業版 LTSC 21H2 x64（`10.0.19044`）、Temurin `21.0.12+8`、Gradle `9.5.0`、`sun.awt.windows.WToolkit`。
