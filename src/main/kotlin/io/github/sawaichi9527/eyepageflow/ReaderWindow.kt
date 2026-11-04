@@ -495,7 +495,10 @@ private class ReaderPanel(
             "display settings: theme=${settings.themeId} " +
                 "layout=${settings.layoutMode} " +
                 "pageWidth=${settings.pageWidth} " +
-                "fontSize=${settings.fontSize}",
+                "fontSize=${settings.fontSize} " +
+                "underline=${settings.underline} " +
+                "underlineWidth=${settings.underlineWidth} " +
+                "punctuation=${settings.punctuationPlacement}",
         )
         val dialog = DisplaySettingsDialog(owner, settings, sampleText) { newSettings ->
             applySettings(newSettings, currentAnchor())

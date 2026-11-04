@@ -84,6 +84,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - 捲頁動畫：`render/PageCurl` 真正做紙背鏡射＋摺線陰影＋紙邊高光（原本只是平移＋陰影），`PageCurlTest` 8 個測試（進度 0／1、前翻／回翻半程、兩個方向互為鏡射、紙背變暗、進度夾取、region 限制範圍）。
 - **翻頁動畫支援回翻**：`PageCurl.paint(..., forward)` 由 `BookCanvas.animateTo()` 依 `target > spreadStart` 決定方向。往前翻摺線由右緣往左跑，往回翻由左緣往右跑；SLIDE 也一樣改成雙向（舊頁與新頁左右對調、陰影換邊）。原本兩個方向共用同一個「由右往左」動畫。
 - **直排（右翻書）動畫方向反轉**：`animateTo()` 先看寫作模式——橫排「下一頁＝右→左」，直排「下一頁＝左→右」（把左邊那張紙掀到右邊），因為直排的頁序是右→左。`PageCurl` 只認摺線方向（`forward` = 右→左），模式換算留在 UI 層（`pageTurnForward()`，由 `PageTurnDirectionTest` 覆蓋）。
+- **顯示預設值定案（2026-11-04）**：字級 26、行距 1.44、縮排 2 em、頁寬 900、Noto Serif CJK TC、仿真紙書、AUTO 版面、直排標點置中、左右對齊開、粗體關、下劃線關，`underlineWidth` 由「普通（1.0）」改為「淡（0.5）」。只影響新使用者（沒有 `settings.properties` 時）；既有設定檔的值優先，不做遷移。`DisplayDefaultsTest` 4 個測試把這組值鎖住。
 - **直排雙頁只掀半頁**：`PageCurl.paint(..., region)` 把捲頁限制在指定矩形內。直排雙頁傳入左半頁，掃描距離從整個跨頁縮成一個頁寬（同樣 220 ms → 速度加倍、方向感明顯）；範圍外直接顯示新頁面，與實體書掀開一張紙後底下跨頁已經換掉一致。橫排與單頁維持原本的整張畫布。
 - 紙背原本實際上看不到：舊程式把鏡射後的紙背畫到摺線左側，卻把 clip 設在摺線右側，兩者沒有交集，畫面上只剩陰影與高光；`PageCurlTest` 當時也只比對「紙背位置與平面頁面不同」，所以沒抓到。已改成「clip 與鏡射同側」，並補上「紙背仍是舊頁面內容且比平面頁暗」的斷言。
 - 內嵌字型：`src/main/resources/fonts/NotoSerifCJKtc-Regular.otf`（OFL，24 MB）+ `Typeface` 以 `Font.createFont` 載入並註冊；預設頁面字型不再依賴系統安裝，Windows／Linux 頁數一致。授權與 SHA-256 記在 `THIRD_PARTY_NOTICES.md`，授權全文在 `fonts/OFL.txt`。啟動 log 會印 `page font:`。
@@ -124,7 +125,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 1. ~~Windows GUI 互動驗證~~（已完成 2026-11-04：IME 中英輸入、125%／150% 縮放、關窗未存提示、拖放、檔案對話框、書籤、書庫、編輯功能皆由使用者實機確認。縮放後需放大視窗才會重繪，列為已知問題）。剪貼簿未單獨確認。
 2. 文件同步：把舊數據（45 tests、191 ms）更新為現況，README 驗證數據比照。
-3. 定案顯示預設值（字級 26、直排標點、下劃線粗細與顏色）。
+3. ~~定案顯示預設值~~（已完成 2026-11-04：字級 26、直排標點置中、下劃線**淡（0.5）**、其餘維持原預設。`DisplayDefaultsTest` 4 個測試鎖住這組值）。
 
 ### P1 排版正確性（M3，約 1–2 天）
 
@@ -331,6 +332,17 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 - 內嵌字型讓 Windows 頁數與 Linux **完全相同**（7,724／8,375）；舊版 Windows 因字型 fallback 是 7,613／8,193。
 - 這台機器有 `Noto Sans TC`，`Typeface.resolveUiFamily()` 回傳它，所以 `ui font:` 不再落到 Segoe UI fallback（handoff 舊版把這條列為已知問題，已不成立）。
 - `build\prototype` 的頁數由 10／11 變成 11／12，是內嵌字型＋新排版規則的結果，與 Linux 一致。
+
+### 顯示預設值定案（2026-11-04）
+
+以全新的設定目錄模擬第一次啟動（`APPDATA` 指到空的暫存資料夾，不動使用者既有設定）：
+
+| 指令 | Exit | 結果 | 證據 |
+|---|---|---|---|
+| `.\scripts\gradlew-local.ps1 run --args="--settings"`（`APPDATA=%TEMP%\opencode\epf-fresh-appdata`） | 手動關閉 | `display settings: theme=realistic layout=AUTO pageWidth=900 fontSize=26.0 underline=false underlineWidth=0.5 punctuation=CENTER` | `%TEMP%\opencode\win-defaults.log` |
+| `.\scripts\gradlew-local.ps1 test --rerun-tasks` | 0 | **125 tests、0 failures**（新增 `DisplayDefaultsTest` 4 個） | `build\test-results\test\` |
+
+`display settings:` 這行診斷 log 順便補上 `underline`／`underlineWidth`／`punctuation`，以後驗證預設值不用開對話框。
 
 ### Windows GUI 互動驗證（2026-11-04）
 

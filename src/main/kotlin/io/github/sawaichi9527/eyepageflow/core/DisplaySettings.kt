@@ -26,7 +26,7 @@ data class DisplaySettings(
     val bold: Boolean = false,
     val underline: Boolean = false,
     val underlineColor: Int = 0x2A2622,
-    val underlineWidth: Float = 1f,
+    val underlineWidth: Float = 0.5f,
     val punctuationPlacement: VerticalPunctuation = VerticalPunctuation.CENTER,
     val justify: Boolean = true,
     val animation: PageTurnAnimation = PageTurnAnimation.NONE,
