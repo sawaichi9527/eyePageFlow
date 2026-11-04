@@ -258,6 +258,7 @@ private class ReaderPanel(
         editorPane.bindFind { openFindDialog(replaceMode = false) }
         editorPane.bindReplace { openFindDialog(replaceMode = true) }
         editorPane.bindEscape { bossKey() }
+        editorPane.bindNextPage { pageDownInEditor() }
         buildToolbar()
         installKeyBindings()
         println(
@@ -747,6 +748,25 @@ private class ReaderPanel(
                     openPath(path)
                 },
             )
+        }
+    }
+
+    /**
+     * 編輯模式的空白鍵：移到下一頁的起點（原作快捷鍵相容）。
+     * Shift+空白由 `EditorPane` 留給預設輸入處理，插入空白。
+     */
+    private fun pageDownInEditor() {
+        if (!editing) {
+            nextPage()
+            return
+        }
+        if (pagination.pageCount <= 0) return
+        val current = pagination.pageIndexFor(editorPane.caretOffset())
+        val target = (current + 1).coerceAtMost(pagination.pageCount - 1)
+        if (target != current) {
+            val offset = pagination.page(target).startOffset
+            editorPane.setCaretOffset(offset)
+            println("editor space -> page ${target + 1}/${pagination.pageCount} offset=$offset")
         }
     }
 

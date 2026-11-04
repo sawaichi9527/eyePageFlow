@@ -8,6 +8,7 @@ import java.awt.Color
 import java.awt.Font
 import java.awt.Insets
 import java.awt.event.ActionEvent
+import java.awt.event.KeyEvent
 import javax.swing.AbstractAction
 import javax.swing.BorderFactory
 import javax.swing.JPanel
@@ -191,6 +192,27 @@ class EditorPane(
 
     fun bindEscape(action: () -> Unit) {
         bindKey("ESCAPE", "boss-key-editor", action)
+    }
+
+    /**
+     * 空白鍵＝下一頁（與原作快捷鍵相容）；Shift+空白不攔截，仍插入空白。
+     *
+     * 綁在 KEY_PRESSED 的 VK_SPACE 上，所以 Shift 版本是不同的 KeyStroke，
+     * 會落到元件的預設輸入處理，正常插入空白。
+     */
+    fun bindNextPage(action: () -> Unit) {
+        textArea.inputMap.put(
+            KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0),
+            "next-page-space",
+        )
+        textArea.actionMap.put(
+            "next-page-space",
+            object : AbstractAction() {
+                override fun actionPerformed(event: ActionEvent) {
+                    action()
+                }
+            },
+        )
     }
 
     private fun bindKey(key: String, actionKey: String, action: () -> Unit) {
