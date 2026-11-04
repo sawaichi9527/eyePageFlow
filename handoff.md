@@ -342,6 +342,14 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 
 `display settings:` 這行診斷 log 順便補上 `underline`／`underlineWidth`／`punctuation`，以後驗證預設值不用開對話框。
 
+### 編輯模式空白鍵（2026-11-04，VMware Ubuntu 24.04 X11）
+
+| 步驟 | 結果 |
+|---|---|
+| `--editor` 開 12 頁檔案、`Ctrl+Home` | 游標在檔頭 |
+| `Shift+Space` | 標題出現未儲存標記、行首多一格空白；**log 沒有換頁紀錄**（確認沒被攔截） |
+| `Space` ×2 | `editor space -> page 2/12 offset=630`、`editor space -> page 3/12 offset=1270`；畫面捲到第 25–39 段 |
+
 ### 自動恢復閱讀位置（2026-11-04，VMware Ubuntu 24.04 X11）
 
 端到端驗證（`xdotool` 送按鍵，模擬真實操作）：
@@ -551,8 +559,8 @@ JBR 下載與 checksum：
 - 順手清掉三條過時的已知問題（材質快取已完成、直排標點已量測、CURL 敘述重複），並把已完成但仍掛在 In progress 的 Ubuntu 24.04 X11 移除。
 - surrogate pair 以單一字處理；頁面字型缺字（emoji）時退回 Segoe UI Emoji／Noto Emoji 等系統字型，仍可能因系統無 emoji 字型而顯示方框。
 - 顯示設定已露出主題、版面、頁寬、字體家族、字級、行高、粗體、底線、五組顏色、三組內置圖案、配色方案、中縫具名預設色、動畫。
+- **編輯模式空白鍵**：`EditorPane.bindNextPage()` 把 `VK_SPACE`（無修飾鍵）綁成「下一頁」，Shift+空格因為是不同 KeyStroke 會落到預設輸入處理，仍插入空白——與 `docs/spec/pagebypage-spec.md` 的原作相容規則一致。編輯器是連續文字檢視，所以是把游標移到下一頁起點（`pageDownInEditor()`），不是切換卡片；log 會印 `editor space -> page N/M offset=X`。
 - 章節規則、書籤、書庫、自動恢復閱讀位置與老闆鍵已可用；托盤在目前 GNOME／Wayland 不可用，老闆鍵以最小化替代。
-- 編輯模式空白鍵仍是插入空白，尚未照原作改成「下一頁」。
 - 檔案關聯註冊尚未實作；目前依靠命令列參數與單一實例轉送。
 - **AppImage 在這台環境執行後會自我刪除**：`appimagetool` continuous build（4919cc4）在此沙箱跑 FUSE fallback 時，離開後會把 `.AppImage` 本體移除。用最小 AppDir 重打包也重現，所以不是本專案打包內容的問題。**2026-11-04 在 Ubuntu 24.04（`/dev/fuse` 正常、`fusermount3` 存在）直接執行同一份 AppImage 則完全正常，檔案也保留**，因此判定為原沙箱環境問題，一般桌面不受影響。
 - 檔案關聯的 `.desktop` 已產生並通過 `desktop-file-validate`，但**尚未安裝**到 `~/.local/share/applications`（會改動使用者環境，需另外確認）。

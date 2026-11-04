@@ -81,6 +81,7 @@ JAVA_HOME="$PWD/.local/jbr-21" build/install/eyePageFlow/bin/eyePageFlow
 | **CURL 紙背** | 摺線旁應看得到鏡射的紙背與漸暗陰影，不是只有一條線 |
 | **顯示預設值** | 刪掉 `~/.config/eyePageFlow/settings.properties` 後啟動：字級 26、直排標點置中、下劃線粗細「淡（0.5）」 |
 | **自動恢復閱讀位置（2026-11-04 新增）** | 開檔翻到第 5 頁、正常關窗（Alt+F4）、重開同一檔：應回到第 5 頁，log 有 `resumed <檔名> at page 5/N offset=...` |
+| **編輯模式空白鍵（2026-11-04 新增）** | `--editor` 進編輯模式：按空白鍵應捲到下一頁起點（log `editor space -> page N/M`）；**Shift+空白仍要打出空白**，不能換頁 |
 
 ## 7. 打包（2026-11-04 新增）
 
