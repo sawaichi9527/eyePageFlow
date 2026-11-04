@@ -16,6 +16,7 @@ import io.github.sawaichi9527.eyepageflow.core.PageTurnAnimation
 import io.github.sawaichi9527.eyepageflow.core.Pagination
 import io.github.sawaichi9527.eyepageflow.core.PaginationEngine
 import io.github.sawaichi9527.eyepageflow.core.RecentFilesStore
+import io.github.sawaichi9527.eyepageflow.core.ReadingPositionStore
 import io.github.sawaichi9527.eyepageflow.core.SaveResult
 import io.github.sawaichi9527.eyepageflow.core.SettingsStore
 import io.github.sawaichi9527.eyepageflow.core.TextDocument
@@ -215,6 +216,7 @@ private class ReaderPanel(
     private val settingsStore = SettingsStore(AppPaths.settingsFile())
     private val bookmarkStore = BookmarkStore(AppPaths.bookmarksFile())
     private val recentStore = RecentFilesStore(AppPaths.recentFilesFile())
+    private val positionStore = ReadingPositionStore(AppPaths.readingPositionsFile())
     private val libraryStore = LibraryStore(AppPaths.libraryFile())
     private val storedSettings = settingsStore.load()
     private var settings = storedSettings.display
@@ -434,6 +436,37 @@ private class ReaderPanel(
     }
 
     private fun currentAnchor(): Int = pagination.page(spreadStart).startOffset
+
+    /** 把目前檔案讀到的位置寫進 `reading-positions.properties`（以字元 offset 記錄）。 */
+    private fun saveCurrentPosition() {
+        val path = document?.path ?: return
+        try {
+            positionStore.put(path, currentAnchor())
+        } catch (exception: Exception) {
+            println("could not save reading position: ${exception.message}")
+        }
+    }
+
+    /** 開檔後跳到上次讀到的頁；沒有紀錄或位置超出範圍就留在第 1 頁。 */
+    private fun resumeSavedPosition(path: Path) {
+        val saved = try {
+            positionStore.get(path)
+        } catch (exception: Exception) {
+            println("could not read reading position: ${exception.message}")
+            null
+        } ?: return
+        if (saved <= 0 || pagination.pageCount <= 0) return
+        val index = pagination.pageIndexFor(saved)
+        spreadStart = if (doublePage) index - index % 2 else index
+        spreadStart = spreadStart.coerceIn(0, (pagination.pageCount - 1).coerceAtLeast(0))
+        if (spreadStart == 0) return
+        updateStatus()
+        canvas.repaint()
+        println(
+            "resumed ${path.fileName} at page ${spreadStart + 1}/${pagination.pageCount} " +
+                "offset=$saved",
+        )
+    }
 
     private fun rebuild(anchor: Int?) {
         canvas.cancelAnimation()
@@ -810,6 +843,7 @@ private class ReaderPanel(
     }
 
     private fun closeWindow() {
+        saveCurrentPosition()
         SwingUtilities.getWindowAncestor(this)?.dispose()
         System.exit(0)
     }
@@ -871,6 +905,7 @@ private class ReaderPanel(
 
     private fun openPath(path: Path) {
         if (!confirmDiscardIfDirty()) return
+        saveCurrentPosition()
         try {
             val loaded = DocumentIO.read(path)
             document = loaded
@@ -880,6 +915,7 @@ private class ReaderPanel(
             cardLayout.show(cards, "reader")
             lastDirectory = path.parent?.toFile()
             rebuild(null)
+            resumeSavedPosition(path)
             updateTitle()
             updateStatus()
             canvas.requestFocusInWindow()

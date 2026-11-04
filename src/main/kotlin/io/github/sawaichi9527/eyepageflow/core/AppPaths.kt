@@ -29,6 +29,8 @@ object AppPaths {
 
     fun recentFilesFile(): Path = configDir().resolve("recent-files.properties")
 
+    fun readingPositionsFile(): Path = configDir().resolve("reading-positions.properties")
+
     fun libraryFile(): Path = configDir().resolve("library.properties")
 
     fun instanceLockFile(): Path = configDir().resolve("instance.lock")

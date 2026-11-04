@@ -531,11 +531,13 @@ JBR 下載與 checksum：
 - `pwsh -File <script> --args="C:\path"` 會把磁碟機代號的 `:` 當成參數分隔而拆成兩個引數；請直接用 `.\scripts\gradlew-local.ps1 run --args="C:\path"`，或改用 `pwsh -Command "& '.\scripts\gradlew-local.ps1' run '--args=C:\path'"`。
 - 行尾由 `.gitattributes` 統一（文字檔 LF、`*.bat`／`*.cmd` CRLF）。既有 clone 若仍顯示整批 modified，執行 `git add --renormalize .` 或重新 clone。
 - 直排標點使用 Unicode 直排形式；字型不支援時退回近似位移（`VerticalPunctuation.TOP_RIGHT` 尚未逐字型量測）。
-- 禁則（行首／行尾標點）與左右對齊已完成。
 - 直排縮排以「欄頂跳 2 格」近似；遇到新頁或空白行仍需更多測試。
+- 禁則（行首／行尾標點）與左右對齊已完成。
+- **自動恢復閱讀位置**：`core/ReadingPositionStore` 以字元 offset 記錄每個檔案讀到哪裡（`reading-positions.properties`，最近 200 筆）。用 offset 而不是頁碼，換字級／字型／直排橫排重新分頁後仍能正確換算（`Pagination.pageIndexFor`）。`ReaderPanel.openPath()` 先存舊檔位置、開檔後再 `resumeSavedPosition()`；`closeWindow()` 也會存。啟動 log 會印 `resumed <檔名> at page N/M offset=X`。`ReadingPositionStoreTest` 6 個測試。
+- 順手清掉三條過時的已知問題（材質快取已完成、直排標點已量測、CURL 敘述重複），並把已完成但仍掛在 In progress 的 Ubuntu 24.04 X11 移除。
 - surrogate pair 以單一字處理；頁面字型缺字（emoji）時退回 Segoe UI Emoji／Noto Emoji 等系統字型，仍可能因系統無 emoji 字型而顯示方框。
 - 顯示設定已露出主題、版面、頁寬、字體家族、字級、行高、粗體、底線、五組顏色、三組內置圖案、配色方案、中縫具名預設色、動畫。
-- 章節規則、書籤、書庫與老闆鍵已可用；托盤在目前 GNOME／Wayland 不可用，老闆鍵以最小化替代。
+- 章節規則、書籤、書庫、自動恢復閱讀位置與老闆鍵已可用；托盤在目前 GNOME／Wayland 不可用，老闆鍵以最小化替代。
 - 編輯模式空白鍵仍是插入空白，尚未照原作改成「下一頁」。
 - 檔案關聯註冊尚未實作；目前依靠命令列參數與單一實例轉送。
 - **AppImage 在這台環境執行後會自我刪除**：`appimagetool` continuous build（4919cc4）在此沙箱跑 FUSE fallback 時，離開後會把 `.AppImage` 本體移除。用最小 AppDir 重打包也重現，所以不是本專案打包內容的問題。**2026-11-04 在 Ubuntu 24.04（`/dev/fuse` 正常、`fusermount3` 存在）直接執行同一份 AppImage 則完全正常，檔案也保留**，因此判定為原沙箱環境問題，一般桌面不受影響。
