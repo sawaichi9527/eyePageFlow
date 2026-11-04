@@ -10,7 +10,7 @@
 
 Ubuntu 26.04 Wayland 已完成本輪回歸（2026-11-04，基準 `bed4ab5`）：131 個測試、benchmark 388–437／657–715 ms、渲染 11／12 頁、JBR 原生 Wayland（`WLToolkit`）與強制 XToolkit 啟動、Big5 開檔、閱讀位置恢復、`package-linux.sh` 打包皆通過。
 
-2026-11-04 晚間再補一輪 UI 功能：滑鼠左右半區翻頁、滾輪、頁面捲軸、Home／End／↑／↓、F3、Ctrl+←／→ 閱讀歷程、F1 使用說明、編輯選單與工具列補齊，以及自訂背景圖片與 `Messages` 多語系架構（繁中預設、英／日可切換）。測試增至 **150 tests／34 suites**。
+2026-11-04 晚間再補一輪 UI 功能：滑鼠左右半區翻頁、滾輪、頁面捲軸、Home／End／↑／↓、F3、Ctrl+←／→ 閱讀歷程、F1 使用說明、編輯選單與工具列補齊，以及自訂背景圖片與 `Messages` 多語系架構（繁中預設、英／日可切換）。測試增至 **155 tests／35 suites**（含應用程式圖示 `AppMark` 的 5 個測試）。
 
 Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 到 `.local/jdk-21`）與 `scripts/gradlew-local.ps1`（`JAVA_HOME`／`GRADLE_USER_HOME` 隔離於 `.local/`）。2026-11-04 已在 Windows 追平遠端 9 個 commit 並完成回歸：131 個測試、渲染、benchmark、GUI 啟動（`WToolkit`、內嵌字型）、托盤與可攜式 zip 打包皆通過；頁數與 Linux 完全一致。
 
@@ -54,7 +54,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - `render/Theme.kt`、`render/TexturePainter.kt`：兩套主題與程序化材質。
 - `ui/ReaderWindow`（`ReaderWindow.kt`）：Swing 主視窗、選單、工具列、翻頁、直排／橫排、主題、低調模式、狀態列、開檔／存檔、拖放、命令列開檔、編碼 fallback 對話框。
 - `core/DisplaySettings.kt`、`ui/DisplaySettingsDialog.kt`：顯示設定模型、表單、即時預覽、確定／取消、字體家族、五組顏色。
-- `render/EmptyStateRenderer.kt`：空白狀態 logo、tagline、雙擊開檔提示。
+- `render/EmptyStateRenderer.kt`：空白狀態的應用程式標記、tagline、雙擊開檔提示（標記與圖示共用 `AppMark`）。
 - `render/PatternCatalog.kt`：桌面／封面／頁面內置圖案與材質對應。
 - `core/ColorSchemeCatalog.kt`：預設／護眼／夜間／羊皮紙／高對比配色。
 - `core/GutterColorCatalog.kt`：深棕／淺灰／米色／抹茶／深黑中縫預設色。
@@ -76,7 +76,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - `platform/SingleInstance.kt`：檔案鎖＋loopback socket；第二次啟動把檔案送到既有視窗。
 - 關窗未儲存提示。
 - `EditorPaneTest`：程式設定文字不觸發 dirty；插入文字會觸發 dirty；find／replace／replaceAll 正常。
-- 測試：150 個測試、34 suites，0 失敗（Windows 10、Ubuntu 24.04 X11、Ubuntu 26.04 Wayland 為 131 的基準再加本輪 19 個；含 4 個書頁渲染回歸測試）。
+- 測試：155 個測試、35 suites，0 失敗（Windows 10、Ubuntu 24.04 X11、Ubuntu 26.04 Wayland 為 131 的基準再加本輪 24 個；含 4 個書頁渲染回歸測試）。
 - **滑鼠與頁面捲軸（2026-11-04）**：`BookCanvas` 左鍵點左右半區翻頁（橫排點右半、直排點左半，與 `pageTurnForward` 同方向），滾輪一格一頁；`ReaderPanel` 右側加 `JScrollBar`，以頁為單位、雙頁模式可見量為 2，拖曳時直接跳頁不播動畫。`pageClickTurnsForward()` 由 `PageClickDirectionTest` 覆蓋。
 - **閱讀快捷鍵（2026-11-04）**：Home／End 到檔案頭尾、↑／↓ 上下頁、F3 尋找下一個、Ctrl+←／Ctrl+→ 閱讀歷程。`core/NavigationHistory` 記錄頁碼（上限 100），換字級／字型／直排橫排重新分頁時清空；`NavigationHistoryTest` 5 個測試。
 - **選單、工具列與 F1 說明（2026-11-04）**：編輯選單補剪下／複製／貼上／全選；工具列補剪貼、復原／重做、書籤、說明；`ui/HelpDialog` 以 HTML 顯示快捷鍵（自製文字），F1 與「說明 → 使用說明」都可開啟，另有 `--guide` 供啟動驗證。
@@ -101,7 +101,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - 行距微調：`PageMetrics.lineSpacing` 把一頁放不滿的剩餘高度平均分配給各行（最多放寬 5%），`PageUnderlines` 用同一組間距畫線；直排仍固定 1em 字格。
 - 孤行控制：`Pagination.avoidOrphanLine()` 不讓某段的第一行單獨留在頁面最下方（頁面至少還有一行、且該段還有後續時，把這一行移到下一頁）。橫排／直排都適用；寡行（段末行單獨落在下一頁頂端）由 `avoidWidowLine()` 處理。
 - 材質快取：`TexturePainter` 把材質依（寬、高、底色、種類）快取成點陣圖，LRU 上限 6 M 像素（約 24 MB）。實測 20 次材質繪製由 254 ms 降到 80 ms（JIT 暖機後）。
-- 應用程式圖示：`--icon <path>` 產生 512×512 透明背景 PNG（`AppIcon` + `EmptyStateRenderer.renderIcon`，自製書頁 logo，無外部素材）。
+- 應用程式圖示：`--icon <path>` 依副檔名產生 PNG 或 ICO（16–256 七個尺寸），內容是 `render/AppMark` 的非對稱眼眶＋「筆」（使用內嵌 Noto Serif CJK TC，無外部素材）。48px 以上用標準眼眶包住字，48px 以下改用加粗眼眶＋略小的字，避免小圖示只剩米白方塊；視窗與工作列圖示由 `AppIcon.images()` 提供 512–16 七個尺寸。`AppMarkTest` 5 個測試、`AppIconTest` 6 個測試。
 - AppImage：`scripts/package-appimage.sh` 把 app-image 組成 AppDir（`AppRun`＋`.desktop`＋`.png`）後用 `appimagetool` 打包，產出 `build/package/eyePageFlow-0.1.0-x86_64.AppImage`（44 MB）。
 - Linux 打包：`scripts/package-linux.sh` 依序做 `installDist` → `jlink`（java.base/java.desktop/java.logging/java.prefs）→ `jpackage --type app-image` → 產出 `.desktop`（`MimeType=text/plain`、`Exec=eyePageFlow %f`）→ `tar.gz`。app-image 不寫死 AWT toolkit，靠程式自動選擇。
 - AWT toolkit 自動選擇：`platform.ToolkitSelection` + `Main.applyToolkitSelection()`。Linux + Wayland session + JVM 具備 `sun.awt.wl.WLToolkit` 才設 `WLToolkit`，其餘沿用 JVM 預設。覆寫改用 `-Deyepageflow.toolkit=`／`EYEPAGEFLOW_TOOLKIT`；`-Dawt.toolkit.name` 不能用來判斷，因為 JBR 會自己塞 `XToolkit` 當預設。
@@ -521,6 +521,22 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 
 - **OS 層輸入**：`java.awt.Robot` 在此 Wayland session 被 GNOME remote desktop portal 拒絕（`NotifyPointer methods`）；`xdotool` 需要 sudo 密碼而未能安裝；XWayland 的 XTEST 也無法把游標事件送進主機上的視窗。上述 in-process 探針已覆蓋 listener 接線，尚未做真人滑鼠操作。
 - 影像的實際外觀（自訂圖片 cover 裁切位置）只以 `ImagePainterTest` 與 `RenderRegressionTest` 的像素斷言驗證，未做目視比對。
+
+### 應用程式圖示（2026-11-04）
+
+- 標記：非對稱眼眶（直接量 eyeShell 圖示的幾何：左尖 `(65,255)`、上緣 `x≈260/y≈158`、下緣 `x≈330/y≈390`、右尖 `(452,256)`）＋內嵌 Noto Serif CJK TC 的「筆」。
+- 自適應規則（C 案）：`>= 48px` 眼眶 28＋字高 130；`< 48px` 眼眶 44＋字高 122、字框加粗到 12，避免小尺寸只剩米白方塊。
+- `AppMark` 也供空白狀態使用；`AppIcon.images()` 提供 512–16 的視窗圖示，`ReaderWindow.launch()` 已設定 `frame.iconImages`。
+
+| 指令 | Exit | 結果 | 證據 |
+|---|---|---|---|
+| `./scripts/gradlew-local.sh test --rerun-tasks` | 0 | **155 tests、35 suites、0 failures**（新增 `AppMarkTest` 5 個、`AppIconTest` 1 個） | `build/test-results/test/` |
+| `./scripts/gradlew-local.sh run --args="--icon /tmp/opencode/newicon/eyePageFlow.png"` | 0 | 512×512 PNG | `/tmp/opencode/newicon/eyePageFlow.png` |
+| `./scripts/gradlew-local.sh run --args="--icon /tmp/opencode/newicon/eyePageFlow.ico"` | 0 | ICO 含 16/24/32/48/64/128/256；Pillow 逐尺寸讀取，中心為米白字 | `/tmp/opencode/newicon/eyePageFlow.ico` |
+| 空白狀態渲染探針（headless） | 0 | 1400×900，置中標記＋tagline＋雙擊提示 | `/tmp/opencode/empty-state.png` |
+| `--guide`（原生 Wayland、`WLToolkit`） | 124（GUI 常駐） | 啟動正常、`help dialog: lang=zh-TW`；設定 `iconImages` 未拋錯 | `/tmp/opencode/icon-gui.log` |
+
+未驗證：Windows 工作列／檔案總管的實際圖示外觀（需 Windows），以及 16px 在真實桌面主題下的辨識度；`--icon` 產物與 ICO 結構已驗證。
 
 ### 內嵌字型與捲頁（2026-11-04）
 

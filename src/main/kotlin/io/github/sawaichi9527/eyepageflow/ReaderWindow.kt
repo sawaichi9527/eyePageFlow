@@ -114,6 +114,7 @@ object ReaderWindow {
         SwingUtilities.invokeLater {
             printStartupDiagnostics()
             val frame = JFrame("eyePageFlow")
+            frame.iconImages = AppIcon.images()
             frame.defaultCloseOperation = JFrame.DO_NOTHING_ON_CLOSE
             val reader = ReaderPanel(initialPath)
             activePanel = reader

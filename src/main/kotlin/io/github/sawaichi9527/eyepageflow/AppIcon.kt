@@ -1,6 +1,7 @@
 package io.github.sawaichi9527.eyepageflow
 
-import io.github.sawaichi9527.eyepageflow.render.EmptyStateRenderer
+import io.github.sawaichi9527.eyepageflow.render.AppMark
+import java.awt.Image
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
@@ -20,6 +21,11 @@ object AppIcon {
 
     /** ICO 內含的尺寸；Windows 用 16–64 給檔案總管／工作列，256 給高 DPI。 */
     private val ICO_SIZES = intArrayOf(16, 24, 32, 48, 64, 128, 256)
+
+    /** 視窗／工作列圖示用的尺寸；AWT 會挑最接近的那一張。 */
+    private val WINDOW_SIZES = listOf(512, 256, 128, 64, 48, 32, 16)
+
+    fun images(): List<Image> = WINDOW_SIZES.map { render(it) }
 
     /** 依副檔名輸出：`.ico` 走 ICO，其餘走 PNG。 */
     fun writeAs(path: Path) {
@@ -44,13 +50,7 @@ object AppIcon {
         println("icon written: $path (${ICO_SIZES.joinToString(",")})")
     }
 
-    fun render(size: Int): BufferedImage {
-        val image = BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
-        val g2 = image.createGraphics()
-        EmptyStateRenderer.renderIcon(g2, size)
-        g2.dispose()
-        return image
-    }
+    fun render(size: Int): BufferedImage = AppMark.render(size)
 
     /**
      * 產生 ICO 位元組。

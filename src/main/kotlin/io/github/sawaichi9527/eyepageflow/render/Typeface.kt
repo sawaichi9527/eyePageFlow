@@ -84,6 +84,15 @@ object Typeface {
     }
 
     /**
+     * 圖示標記用的字型：優先使用內嵌 CJK 字型，沒有時退回系統字型。
+     * 不用 `Font.deriveFont(BOLD)`：內嵌的是 Regular，假粗體會讓小尺寸糊掉。
+     */
+    fun iconFont(size: Float): Font {
+        embeddedFont?.let { return it.deriveFont(size) }
+        return Font(resolveFamily(), Font.PLAIN, size.toInt().coerceAtLeast(1))
+    }
+
+    /**
      * 頁面字型缺少某個字（例如 emoji）時，找一個能顯示它的系統字型。
      * 找不到就回傳 null，由呼叫端沿用原本的字型。
      */
