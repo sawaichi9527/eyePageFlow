@@ -805,6 +805,34 @@ JBR 下載與 checksum：
 - Ubuntu 26.04 的 X11 session 不是預設，尚未測試。
 - 原作素材與說明文件有著作權，未包含在專案中。
 
+### Session close（2026-11-23）
+
+環境：Windows 10 IoT 企業版 LTSC 21H2 x64（`10.0.19044`）、Temurin `21.0.13.1+2`、Gradle `9.5.0`、`sun.awt.windows.WToolkit`。
+HEAD：`0fff55c`（`main` 與 `origin/main` 同步）；本次已發佈 `v1.0.0`。
+
+| 指令 | Exit | Duration | 結果 | 證據 |
+|---|---|---|---|---|
+| `.\scripts\gradlew-local.ps1 test --rerun-tasks` | 0 | 21s | **158 tests、36 suites、0 failures、0 errors、0 skipped** | `build\test-results\test\` |
+| `.\scripts\gradlew-local.ps1 check` | 0 | 1s | BUILD SUCCESSFUL | 終端輸出 |
+| `.\scripts\gradlew-local.ps1 run --args="--benchmark"` | 0 | 4s | 解碼 179.6 ms、橫排 502.9 ms／7,724 頁、直排 664.5 ms／8,375 頁 | 終端輸出 |
+| `.\scripts\gradlew-local.ps1 run --args="--render build/prototype"` | 0 | 4s | 橫排 11 頁、直排 12 頁、3,761 字 | `build\prototype\*.png` |
+| `.\scripts\package-windows.ps1`（17:03） | 0 | — | zip `eyePageFlow-1.0.0-windows-x64.zip` 58,888,962 bytes、SHA-256 `522b6055…c785ee`；內附 runtime Big5 smoke 解碼 118.7 ms、7,724／8,375 頁 | `build\package\` |
+| GitHub Release `v1.0.0` | — | — | asset `digest: sha256:522b6055…c785ee` 與本機一致；<https://github.com/sawaichi9527/eyePageFlow/releases/tag/v1.0.0> | GitHub API |
+| Ubuntu 24.04.5 VM 回歸（本 session 稍早） | 0 | — | 134 tests（合併前）、頁數 7,724／8,375 前後相同、打包與 Big5 正常 | 見上方「Ubuntu 24.04.5 LTS 的 runtime 升級回歸」 |
+| `git grep -n -I "gho_\|20040401"` | 1 | — | 版控檔案中沒有 token／密碼 | 終端輸出 |
+
+- Benchmark 本次 502.9／664.5 ms 與稍早同一份程式的 371.0／592.7 ms 有差距，頁數完全相同，
+  屬於桌面負載造成的抖動（仍在 1 秒內）。
+- 本機已刪除舊的 `build\package\eyePageFlow-0.1.0-windows-x64.zip`（`build/` 不進版控）。
+
+尚未驗證（本次 Session 未執行）：
+
+- Ubuntu 26.04 Wayland 的本輪回歸（清單見 `docs/linux-regression.md`）。
+- Linux 1.0.0 發行物（tar.gz／AppImage）尚未以 1.0.0 版本重新打包。
+- 剪貼簿 GUI 互動、10 MiB 以上檔案與 20 MiB 上限、編輯器 10 MiB 輸入延遲。
+- 檔案關聯註冊、`.desktop` 實際安裝。
+- 未執行壓力測試、未觸及硬體。
+
 ## M0 判定
 
 **Go。** 分頁速度、直排／橫排渲染、JBR 原生 Wayland、app-image 啟動都已在目前環境驗證。Windows 端已補上建置、測試、渲染、benchmark、GUI 互動（IME／縮放／拖放／關窗提示）與可攜式 zip；禁則、左右對齊、offset↔page、surrogate pair 已完成，Ubuntu 26.04 Wayland 與 Ubuntu 24.04 原生 X11 回歸也都通過。Windows 顯示縮放即時重繪已於 2026-11-23 修好並實機驗證；最大風險改為 2 vCPU 環境下 benchmark 的 1 秒門檻偶爾被環境抖動超過。
