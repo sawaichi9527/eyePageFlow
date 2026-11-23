@@ -8,7 +8,7 @@
 
 已完成規格文件、Gradle 骨架、編碼偵測、字寬表分頁、Java2D 書頁渲染、Swing 原型、10 MiB benchmark、JBR 21 原生 Wayland／XToolkit 啟動，以及文件讀寫與基本開檔／存檔。
 
-顯示設定、空白狀態、雙擊開檔、翻頁動畫與整頁下劃線已完成；編輯模式已接上 RSyntaxTextArea，可切換閱讀／編輯、偵測 dirty、存檔同步、尋找／取代、單頁書本外觀與 undo/redo 100 上限，並有關窗未儲存提示。章節列表支援可切換規則與目前章節標示；顯示設定、章節規則、書籤、最近開啟檔案與書庫會存到 XDG／AppData。檔案列表、書庫管理、老闆鍵（最小化）與單一實例已完成。尚未完成檔案關聯註冊；Windows GUI 互動與 Ubuntu 24.04 原生 X11 已於 2026-11-04 驗證。
+顯示設定、空白狀態、雙擊開檔、翻頁動畫與整頁下劃線已完成；編輯模式已接上 RSyntaxTextArea，可切換閱讀／編輯、偵測 dirty、存檔同步、尋找／取代、單頁書本外觀與 undo/redo 100 上限，並有關窗未儲存提示。章節列表支援可切換規則與目前章節標示；顯示設定、章節規則、書籤、最近開啟檔案與書庫會存到 XDG／AppData。檔案列表、書庫管理、老闆鍵（最小化）與單一實例已完成。檔案關聯註冊為產品決策不做（只用命令列、拖放、最近開啟與檔案對話框開檔）；Windows GUI 互動與 Ubuntu 24.04 原生 X11 已於 2026-11-04 驗證。
 
 Ubuntu 26.04 Wayland 已完成本輪回歸（2026-11-04，基準 `bed4ab5`）：131 個測試、benchmark 388–437／657–715 ms、渲染 11／12 頁、JBR 原生 Wayland（`WLToolkit`）與強制 XToolkit 啟動、Big5 開檔、閱讀位置恢復、`package-linux.sh` 打包皆通過。
 
@@ -129,7 +129,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - 自訂圖片固定 cover 置中裁切，沒有偏移或縮放比例選項。
 - 直排標點使用「置中」時已改為依墨跡邊界真正置中；字型缺直排形式、且選「右上」時仍用近似位移。
 - 尚未做 golden image 基準與字型子集。
-- 目前環境的 GNOME／Wayland 不支援 `SystemTray`，老闆鍵會退回最小化；托盤在有支援的桌面才會安裝。
+- **GNOME／Wayland 的托盤替代方案不做（2026-11-23 產品決策）**：維持老闆鍵最小化；`SystemTray` 支援的桌面（Windows、KDE）仍會安裝。詳見 Known issues。
 - `AUTO` 依寬高比（1.25）切換單／雙頁；`EQUAL_HEIGHT` 只依高度縮放。尚未做到「固定頁寬」的第三種尺寸。
 - 翻頁動畫 CURL 已是紙背鏡射＋陰影的 2D 近似，仍非真正的 3D 捲曲；方向已依寫作模式換算（直排為右翻書），直排雙頁只掀半頁；翻頁速度（`PAGE_TURN_DURATION_NS`，220 ms）尚未調校，直排雙頁改半頁後體感變快。
 
@@ -151,7 +151,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 ### P2 打包與平台（M10，約 1–2 天）
 
-9. ~~Windows 可攜式 zip~~（已完成：`scripts/package-windows.ps1`，55.7 MB，解開即可執行；**不提供 MSI**，使用者已明確排除安裝檔）。檔案關聯註冊仍未做。
+9. ~~Windows 可攜式 zip~~（已完成：`scripts/package-windows.ps1`，55.7 MB，解開即可執行；**不提供 MSI**，使用者已明確排除安裝檔）。檔案關聯註冊為產品決策不做（2026-11-23）。
 10. ~~Linux AppImage~~（已產出；`appimagetool` 放在 `.local/tools/`，未納入版控）。
 11. ~~Ubuntu 26.04 Wayland 回歸~~（已完成 2026-11-04：131 tests、benchmark、渲染、WLToolkit／XToolkit、Big5 開檔、閱讀位置恢復與打包；清單見 `docs/linux-regression.md`。1.0.0 版本另於 2026-11-23 以 `027912e` 補跑，158 tests）。Ubuntu 24.04 原生 X11 已於同日完成。
 
@@ -160,7 +160,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 12. ~~`AUTO`／`EQUAL_HEIGHT` 區分~~（已完成：AUTO 依寬高比、EQUAL_HEIGHT 只依高度縮放）。
 13. ~~CURL 翻頁動畫~~（已完成：紙背鏡射、摺線陰影、紙邊高光；回翻方向已補）。
 14. ~~內嵌 Noto Serif CJK TC（OFL）~~（已完成：24 MB OTF + OFL 全文，jar 由 1 MB 增至 20 MB）。
-15. GNOME／Wayland 的托盤替代方案。
+15. ~~GNOME／Wayland 的托盤替代方案~~（2026-11-23 產品決策：不做，維持 Esc 最小化）。
 16. ~~Ubuntu 24.04 原生 X11 回歸~~（**已完成 2026-11-04**：VMware 上的 Ubuntu 24.04.5 + `Type=x11`/`Xorg`，125 tests、benchmark、渲染、`toolkit=sun.awt.X11.XToolkit`、Big5 開檔、`package-linux.sh` 全部通過；benchmark 在 2 vCPU VM 上偶有 >1 s 的環境抖動，見下方驗證章節）。
 
 ## Validation evidence
@@ -799,9 +799,10 @@ JBR 下載與 checksum：
 - 顯示設定已露出主題、版面、頁寬、字體家族、字級、行高、粗體、底線、五組顏色、三組內置圖案、配色方案、中縫具名預設色、動畫。
 - **編輯模式空白鍵**：`EditorPane.bindNextPage()` 把 `VK_SPACE`（無修飾鍵）綁成「下一頁」，Shift+空格因為是不同 KeyStroke 會落到預設輸入處理，仍插入空白——與 `docs/spec/pagebypage-spec.md` 的原作相容規則一致。編輯器是連續文字檢視，所以是把游標移到下一頁起點（`pageDownInEditor()`），不是切換卡片；log 會印 `editor space -> page N/M offset=X`。
 - 章節規則、書籤、書庫、自動恢復閱讀位置與老闆鍵已可用；托盤在目前 GNOME／Wayland 不可用，老闆鍵以最小化替代。
-- 檔案關聯註冊尚未實作；目前依靠命令列參數與單一實例轉送。
+- **不做 `.txt` 檔案關聯（2026-11-23 產品決策）**：使用者的閱讀情境是「開程式後自己選要看的小說」，不打算讓 eyePageFlow 變成 `.txt` 的預設開啟程式。因此不安裝 `.desktop`、不寫 `xdg-mime` 預設、Windows 端也不寫登錄檔；開檔只靠命令列參數、拖放、最近開啟與檔案對話框。`.desktop` 仍會隨打包產出（AppImage 需要它），只是不主動安裝到使用者環境。
+- **不做 GNOME／Wayland 托盤替代方案（2026-11-23 產品決策）**：GNOME 已移除舊式 `SystemTray`，另外接 AppIndicator 外掛的成本高、收益小。維持現狀：老闆鍵 Esc 最小化，從工作列／dock 叫回；`SystemTray.isSupported()` 為真時（Windows、KDE 等）仍會安裝托盤。
 - **AppImage 在這台環境執行後會自我刪除**：`appimagetool` continuous build（4919cc4）在此沙箱跑 FUSE fallback 時，離開後會把 `.AppImage` 本體移除。用最小 AppDir 重打包也重現，所以不是本專案打包內容的問題。**2026-11-04 在 Ubuntu 24.04（`/dev/fuse` 正常、`fusermount3` 存在）直接執行同一份 AppImage 則完全正常，檔案也保留**，因此判定為原沙箱環境問題，一般桌面不受影響。
-- 檔案關聯的 `.desktop` 已產生並通過 `desktop-file-validate`，但**尚未安裝**到 `~/.local/share/applications`（會改動使用者環境，需另外確認）。
+- AppImage 的 `.desktop` 隨打包產出並通過 `desktop-file-validate`，但不主動安裝到 `~/.local/share/applications`（見上方「不做 `.txt` 檔案關聯」）。
 - Windows 不提供 MSI／安裝檔（使用者指定只要可攜式 zip，解開即可執行）；jpackage 的 MSI 另外需要 WiX Toolset。
 - Ubuntu 26.04 的 X11 session 不是預設，尚未測試。
 - 原作素材與說明文件有著作權，未包含在專案中。
@@ -864,8 +865,9 @@ HEAD：`0fff55c`（`main` 與 `origin/main` 同步）；本次已發佈 `v1.0.0`
 與 Known issues 記載的沙箱 FUSE fallback 現象相同（同日重打包後檔案保留）。
 
 尚未驗證（本輪未執行）：OS 層真人滑鼠／鍵盤操作、剪貼簿、Wayland 下的 IME 與拖放、
-10 MiB 以上檔案與 20 MiB 上限、編輯器 10 MiB 輸入延遲、`.desktop` 實際安裝與檔案關聯註冊、
+10 MiB 以上檔案與 20 MiB 上限、編輯器 10 MiB 輸入延遲、
 AppImage 在一般桌面直接執行（此沙箱限制）、Ubuntu 26.04 的 X11 session。
+（`.desktop` 安裝與檔案關聯已於同日列為不做，見 Known issues。）
 
 ## M0 判定
 

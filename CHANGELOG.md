@@ -59,8 +59,8 @@
 
 ### 已知限制
 
-- Ubuntu 26.04 Wayland 的本輪（1.0.0）回歸尚未執行，最後一次完整驗證為 2026-11-04（JBR 21.0.11）。
+- Ubuntu 26.04 Wayland 的 1.0.0 回歸已於 2026-11-23 以 `027912e` 補驗（158 tests、頁數與 Windows 相同、原生 `WLToolkit`、打包通過，見 `handoff.md`）。
 - JBR 21 線最新為 `21.0.11`，尚未包含 2026-10 的 OpenJDK CPU 修正（最高 CVSS 7.0）。
-- 檔案關聯註冊與 `.desktop` 安裝尚未實作；AppImage 在本機沙箱環境會自我刪除（一般桌面不受影響）。
+- 檔案關聯與 `.desktop` 安裝不做（產品決策：由使用者自行在程式中選檔）；AppImage 在本機沙箱環境會自我刪除（一般桌面不受影響）。
 - Ubuntu 24.04 的 Wayland session 未驗證（VM 固定 Xorg）。
 - 剪貼簿 GUI 互動、10 MiB 以上檔案與 20 MiB 上限、編輯器 10 MiB 輸入延遲尚未驗證。

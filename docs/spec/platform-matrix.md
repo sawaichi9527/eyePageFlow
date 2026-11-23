@@ -72,8 +72,8 @@ M0 執行環境：
 
 - 新注音／拼音 IME 候選字位置。
 - 125%／150% 分數縮放與清晰度。
-- 系統匣（StatusNotifier／AppIndicator）。
-- 老闆鍵縮到托盤後如何還原。
+- 系統匣（StatusNotifier／AppIndicator）。（2026-11-23 決策：GNOME／Wayland 不接，維持 Esc 最小化）
+- 老闆鍵縮到托盤後如何還原。（同上：沒有托盤時以最小化代替，從工作列／dock 叫回）
 - 檔案拖放（Nautilus → 視窗）。
 - 檔案對話框（優先使用 Swing `JFileChooser`）。
 - 剪貼簿。
