@@ -4,6 +4,8 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 
 本專案使用自己的品牌與自製素材，不包含原作的程式碼、圖像或說明文件。
 
+發行版：[Releases](https://github.com/sawaichi9527/eyePageFlow/releases)（最新 **1.0.0**：Windows 可攜式 zip）。
+
 ## 目前狀態
 
 **M0 技術驗證完成；M1 進行中（檔案層與主視窗殼已完成第一步）。三個平台的目標組合都已驗證：Ubuntu 26.04 Wayland、Ubuntu 24.04 原生 X11（VMware）、Windows 10 x64；Windows 可攜式打包與 GUI 互動亦已驗證。**
