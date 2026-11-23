@@ -23,7 +23,7 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 
 本次 Session 已完成的 UI 行為變更（皆有實機證據，見上）：翻頁方向與半頁掃描、顯示預設值定案、自動恢復閱讀位置、編輯模式空白鍵。
 
-尚未完成：檔案關聯註冊、剪貼簿的 GUI 互動驗證、Ubuntu 24.04 的 Wayland session、`.desktop` 實際安裝。Windows 顯示縮放已加入主動重排與 `display scale:` 診斷，仍待實機切換驗證。
+尚未完成：檔案關聯註冊、剪貼簿的 GUI 互動驗證、Ubuntu 24.04 的 Wayland session、`.desktop` 實際安裝。Windows 顯示縮放已可在執行中即時套用（125%／150% 實機驗證）。
 
 ## 平台
 
@@ -181,6 +181,44 @@ Windows（Windows 10 x64、Temurin 21.0.12+8、Gradle 9.5.0）：
 - 可攜式打包：`build\package\eyePageFlow-0.1.0-windows-x64.zip`（55.7 MB），解開後可執行、Big5 解碼正常。
 - 排版參數已對齊原作 PageByPage 的實測值：頁 900×920、內容 812×856、字號 26、
   直排欄距 1.5 em、行距 1.44 em（原作頁 909×919、內容 825×872、字距 26 px、欄距／行距 39 px）。
+
+## 疑難排解：log 在哪裡
+
+GUI 的診斷訊息是標準輸出，`gradlew run` 會把它轉送到呼叫端的主控台；沒有另開 log 檔。
+
+**方法 1（建議）：自己接一份**
+
+```powershell
+.\scripts\gradlew-local.ps1 run 2>&1 | Tee-Object -FilePath build\gui.log
+```
+
+之後看 `build\gui.log`。Linux 用 `./scripts/gradlew-local.sh run 2>&1 | tee build/gui.log`。
+
+**方法 2：Gradle daemon log（會保留最近幾次執行的輸出）**
+
+```text
+.local\gradle-home\daemon\9.5.0\daemon-<pid>.out.log      # Windows
+.local/gradle-home/daemon/9.5.0/daemon-<pid>.out.log      # Linux
+```
+
+```powershell
+Select-String -Path .local\gradle-home\daemon\9.5.0\daemon-*.out.log -Pattern "display scale|toolkit=|page font:|opened "
+```
+
+**要看哪幾行**
+
+| 行 | 意義 |
+|---|---|
+| `toolkit=sun.awt.wl.WLToolkit` | 原生 Wayland（Linux） |
+| `toolkit=sun.awt.X11.XToolkit` | X11／XWayland |
+| `toolkit=sun.awt.windows.WToolkit` | Windows |
+| `ui font: <家族> <pt>` | UI 字型與邏輯字級（15pt 是下限） |
+| `page font: ... (embedded=true)` | 使用內嵌 Noto Serif CJK TC |
+| `display scale: ui scale=1.0` | 啟動時的顯示縮放 |
+| `display scale changed: ... -> ...` | 執行中偵測到縮放變更並已重排 |
+| `opened <檔> encoding=... pages=...` | 開檔結果（編碼與頁數） |
+
+設定與書籤等資料在 `%APPDATA%\eyePageFlow`（Windows）或 `~/.config/eyePageFlow`（Linux）。
 
 ## 文件
 

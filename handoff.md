@@ -4,7 +4,7 @@
 
 **M0 技術驗證完成（Go）；M1 進行中，已完成檔案層與主視窗殼的第一步。**
 
-2026-11-23：工具鏈升到 JDK 21 最新補丁（Temurin `21.0.13.1+2`、JBR `21.0.11+10-1163.125`），新增 `SECURITY.md` 與 `docs/security/advisories.md`（Log4Shell／OpenSSH／JDK CPU 判定）；Windows 回歸 134 tests 全綠、頁數不變、重新打包通過，Ubuntu 24.04.5 VM 以同機前後對照完成（升級前後頁數相同、benchmark 都在 1 秒內、Big5 開檔正常）。Windows 顯示縮放（DPI）已加入 `graphicsConfiguration` 監聽與診斷 log，仍需實機切換縮放驗證；Ubuntu 26.04 Wayland 待補驗。
+2026-11-23：工具鏈升到 JDK 21 最新補丁（Temurin `21.0.13.1+2`、JBR `21.0.11+10-1163.125`），新增 `SECURITY.md` 與 `docs/security/advisories.md`（Log4Shell／OpenSSH／JDK CPU 判定）；Windows 回歸 134 tests 全綠、頁數不變、重新打包通過，Ubuntu 24.04.5 VM 以同機前後對照完成（升級前後頁數相同、benchmark 都在 1 秒內、Big5 開檔正常）。**Windows 顯示縮放（DPI）已實機驗證 125%／150% 即時重繪正常**（daemon log 有 `display scale changed` 四筆）；Ubuntu 26.04 Wayland 待補驗。
 
 已完成規格文件、Gradle 骨架、編碼偵測、字寬表分頁、Java2D 書頁渲染、Swing 原型、10 MiB benchmark、JBR 21 原生 Wayland／XToolkit 啟動，以及文件讀寫與基本開檔／存檔。
 
@@ -17,7 +17,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 ## Completed
 
 - **工具鏈升級到 JDK 21 最新補丁（2026-11-23）**：Temurin `21.0.12+8` → `21.0.13.1+2`（含 2026-10 CPU、11-17 CSPU、eMudhra CA 修正）；JBR `1163.116` → `1163.125`。`bootstrap-jbr.sh` 原本只驗 `IMPLEMENTOR`，升級時會誤判「已安裝」，已改為比對 `IMPLEMENTOR_VERSION`。
-- **顯示縮放（DPI）主動重排（2026-11-23）**：`platform/DisplayScale` 以 `GraphicsConfiguration.defaultTransform` 判斷比例是否真的改變；`ReaderWindow.installDisplayScaleWatcher()` 監聽 `graphicsConfiguration`，變更時 `FlatLaf.updateUI()` → `enforceMinimumUiFontSize()` → `SwingUtilities.updateComponentTreeUI(frame)` → `ReaderPanel.onDisplayScaleChanged()` → `validate()`／`repaint()`。啟動與變更都印 `display scale:`（含 `ui scale=`、`ui font`）。`DisplayScaleTest` 3 個測試。
+- **顯示縮放（DPI）主動重排（2026-11-23，已實機驗證）**：`platform/DisplayScale` 以 `GraphicsConfiguration.defaultTransform` 判斷比例是否真的改變；`ReaderWindow.installDisplayScaleWatcher()` 監聽 `graphicsConfiguration`，變更時 `FlatLaf.updateUI()` → `enforceMinimumUiFontSize()` → `SwingUtilities.updateComponentTreeUI(frame)` → `ReaderPanel.onDisplayScaleChanged()` → `validate()`／`repaint()`。實機在 125% 與 150% 切換都立即正確，log 依序出現 `1.0 -> 1.25`、`1.25 -> 1.0`、`1.0 -> 1.5`、`1.5 -> 1.0`。`display scale:` 的 `ui font` 維持 15pt 是正常的：那是邏輯點數，裝置端縮放由 Java2D 的 `defaultTransform` 負責。`DisplayScaleTest` 3 個測試。
 - **安全文件（2026-11-23）**：`SECURITY.md`（支援版本、通報、修補 SLA、供應鏈）與 `docs/security/advisories.md`（Log4Shell 不適用證據、OpenSSH 判定、JDK/JBR 補丁缺口）。
 - `docs/spec/pagebypage-spec.md`：功能矩陣、畫面、快捷鍵、編碼、資料存放、與原作差異。
 - `docs/spec/typography.md`：頁面幾何、頁序、頁碼、狀態列、直排／橫排規則。
@@ -115,7 +115,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 ## In progress
 
-- **變更 Windows 顯示縮放（DPI）後，視窗不會立即重繪**：已加入 `graphicsConfiguration` 監聽與 `display scale:` 診斷（2026-11-23），但**尚未實機驗證**縮放當下是否會收到事件。若 log 完全沒有 `display scale changed`，代表 JVM 沒收到 DPI 變更，只能改成「請重新啟動」提示。
+- **Ubuntu 26.04 Wayland 本輪回歸**：runtime 升級與 DPI 修正只在 Windows 與 Ubuntu 24.04 X11 驗證，26.04 Wayland 待使用者補驗（清單見 `docs/linux-regression.md`）。
 - 直排標點使用「置中」時已改為依墨跡邊界真正置中；字型缺直排形式、且選「右上」時仍用近似位移。
 - 尚未做 golden image 基準與字型子集。
 - 目前環境的 GNOME／Wayland 不支援 `SystemTray`，老闆鍵會退回最小化；托盤在有支援的桌面才會安裝。
@@ -401,6 +401,27 @@ OpenSSH：VM 已是 `1:9.6p1-3ubuntu13.20`（USN-8928-1 的修復版本），`ap
 
 尚未驗證：Ubuntu 26.04 Wayland 的本輪回歸（由使用者在開發機執行，清單見 `docs/linux-regression.md`）。
 
+### 顯示縮放（DPI）實機驗證（2026-11-23，Windows）
+
+使用者手動執行 `.\scripts\gradlew-local.ps1 run`，在應用程式開著的情況下把 Windows 縮放改成 125% → 回到 100% → 150% → 回到 100%，兩次都立即正確。
+
+證據（Gradle daemon log，`D:\workspace\eyePageFlow\.local\gradle-home\daemon\9.5.0\daemon-13944.out.log`，2026-11-23 16:34 的 build）：
+
+```text
+opened E:\Life\eNovel\...txt encoding=GB18030 chars=1162775 pages=2272
+opened E:\Life\eNovel\tmp\02_yi.ren.ao.shih.lu.txt encoding=UTF-16 LE chars=4081424 pages=8497
+display scale changed: ui scale=1.0 -> 1.25
+display scale: ui font Noto Sans TC 15pt
+display scale changed: ui scale=1.25 -> 1.0
+display scale: ui font Noto Sans TC 15pt
+display scale changed: ui scale=1.0 -> 1.5
+display scale: ui font Noto Sans TC 15pt
+display scale changed: ui scale=1.5 -> 1.0
+display scale: ui font Noto Sans TC 15pt
+```
+
+結論：`graphicsConfiguration` 事件確實會到，重排路徑有效；`ui font` 停在 15pt 是邏輯點數，實際大小由 Java2D 縮放。
+
 ### 工具鏈升級與安全更新（2026-11-23，Windows）
 
 環境：Windows 10 IoT 企業版 LTSC 21H2 x64（`10.0.19044`）、Temurin `21.0.13.1+2`、Gradle `9.5.0`、`sun.awt.windows.WToolkit`。
@@ -420,7 +441,6 @@ OpenSSH：VM 已是 `1:9.6p1-3ubuntu13.20`（USN-8928-1 的修復版本），`ap
 尚未驗證：
 
 - Ubuntu 26.04 Wayland 的本輪 runtime 升級與回歸（見上一節的 24.04 結果）。
-- Windows 顯示縮放 100%→150% 的即時重繪（需實機切換；log 應出現 `display scale changed`）。
 - Ubuntu 26.04 的 OpenSSH 套件版本（24.04 已確認在修復版本）。
 
 ### 顯示預設值定案（2026-11-04）
@@ -631,7 +651,7 @@ JBR 下載與 checksum：
 
 ## Known issues
 
-- **Windows 變更顯示縮放後不會立即重繪（已加修補，待實機驗證）**：2026-11-23 起 `ReaderWindow` 會監聽視窗的 `graphicsConfiguration`，比例真的改變時重建 FlatLaf 預設值、更新元件樹並重排書頁；啟動與變更都會印 `display scale:`。若這行沒出現、畫面仍要最大化／還原才正確，代表 JVM 沒收到 DPI 事件（JEP 263 記載 Windows 通常要重啟才會通知），下一步改成顯示「請重新啟動」提示。workaround 仍是最大化／還原一次。
+- **Windows 顯示縮放已可在執行中套用（2026-11-23 實機驗證）**：`ReaderWindow` 監聽視窗的 `graphicsConfiguration`，比例改變時重建 FlatLaf 預設值、更新元件樹並重排書頁；實測 125%／150% 切換都立即正確，log 會印 `display scale changed:`。若未來某個 JVM 版本不再送這個事件（JEP 263 提到 Windows 的 DPI 變更通知可能只在建立視窗時發生），就會退回「最大化／還原一次」的行為，可用啟動 log 是否有 `display scale changed` 判斷。
 
 - UI 中文只在有 Noto Sans CJK／Noto Sans TC 的機器上變好。Windows 開發機有 `Noto Sans TC`，所以 `ui font:` 顯示 `Noto Sans TC 15pt`；沒有安裝的 Windows 機器 `resolveUiFamily()` 仍回傳 null，選單／工具列會走 Segoe UI 的 fallback。
 - 這台 JVM 的 Swing 已經是反鋸齒（`awt.useSystemAAFontSettings=on` 由程式設定），`lcd`／`gasp` 對 FlatLaf 版面量測不出可見差異；「字很舊」的感覺來自字級與 hinting，不是沒有反鋸齒。
@@ -662,4 +682,4 @@ JBR 下載與 checksum：
 
 ## M0 判定
 
-**Go。** 分頁速度、直排／橫排渲染、JBR 原生 Wayland、app-image 啟動都已在目前環境驗證。Windows 端已補上建置、測試、渲染、benchmark、GUI 互動（IME／縮放／拖放／關窗提示）與可攜式 zip；禁則、左右對齊、offset↔page、surrogate pair 已完成，Ubuntu 26.04 Wayland 與 Ubuntu 24.04 原生 X11 回歸也都通過。最大風險改為：Windows 變更顯示縮放不會即時重繪（已知問題）、以及 2 vCPU 環境下 benchmark 的 1 秒門檻偶爾被環境抖動超過。
+**Go。** 分頁速度、直排／橫排渲染、JBR 原生 Wayland、app-image 啟動都已在目前環境驗證。Windows 端已補上建置、測試、渲染、benchmark、GUI 互動（IME／縮放／拖放／關窗提示）與可攜式 zip；禁則、左右對齊、offset↔page、surrogate pair 已完成，Ubuntu 26.04 Wayland 與 Ubuntu 24.04 原生 X11 回歸也都通過。Windows 顯示縮放即時重繪已於 2026-11-23 修好並實機驗證；最大風險改為 2 vCPU 環境下 benchmark 的 1 秒門檻偶爾被環境抖動超過。
