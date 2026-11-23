@@ -417,11 +417,11 @@ OpenSSH：VM 已是 `1:9.6p1-3ubuntu13.20`（USN-8928-1 的修復版本），`ap
 
 | 產物 | 大小 | SHA-256 |
 |---|---|---|
-| `build\package\eyePageFlow-1.0.0-windows-x64.zip` | 58,861,472 bytes（56.1 MiB） | `7b3707b8f49140f7bb5267c9d06264b83b54898352e6df1406d67a7545d3c6fa` |
-| `build\package\eyePageFlow\`（app-image） | 71.5 MB | — |
+| `build\package\eyePageFlow-1.0.0-windows-x64.zip` | 58,888,962 bytes（56.2 MiB） | `522b6055c5b49a47aadaa8534e4c5d7d2458a6ff3095227c1534e2a9ced785ee` |
+| `build\package\eyePageFlow\`（app-image） | 71.6 MB | — |
 
 - 版本：`build.gradle.kts`、`package-windows.ps1`、`package-linux.sh`、`package-appimage.sh` 全部改為 `1.0.0`。
-- 打包後的 runtime smoke test：解碼 102.1 ms、橫排 461.8 ms／7,724 頁、直排 615.8 ms／8,375 頁（Big5 正常）。
+- 打包後的 runtime smoke test：解碼 118.7 ms、橫排 403.0 ms／7,724 頁、直排 552.6 ms／8,375 頁（Big5 正常）。
 - 解壓驗證：腳本自動 `Expand-Archive` 到 `build\package\verify` 並確認 `eyePageFlow.exe` 存在。
 - 1.0.0 前的回歸（合併 main 後）：`test --rerun-tasks` 158 tests、36 suites、0 failures；`check` 成功；render 11／12 頁。
 - Linux 的 1.0.0 發行物（tar.gz／AppImage）尚未重新打包；目前 Linux 驗證的是 0.1.0 打包流程＋升級後 runtime。
