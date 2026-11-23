@@ -23,7 +23,7 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 
 本次 Session 已完成的 UI 行為變更（皆有實機證據，見上）：翻頁方向與半頁掃描、顯示預設值定案、自動恢復閱讀位置、編輯模式空白鍵。
 
-尚未完成：檔案關聯註冊、剪貼簿的 GUI 互動驗證、Ubuntu 24.04 的 Wayland session、`.desktop` 實際安裝。Windows 變更顯示縮放後需最大化一次才會重繪，列為已知問題。
+尚未完成：檔案關聯註冊、剪貼簿的 GUI 互動驗證、Ubuntu 24.04 的 Wayland session、`.desktop` 實際安裝。Windows 顯示縮放已加入主動重排與 `display scale:` 診斷，仍待實機切換驗證。
 
 ## 平台
 
@@ -81,7 +81,7 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 ### Windows
 
 ```powershell
-# 第一次：下載 Temurin 21.0.12+8 到 .local\jdk-21（SHA-256 驗證、不動系統 JDK）
+# 第一次：下載 Temurin 21.0.13.1+2 到 .local\jdk-21（SHA-256 驗證、不動系統 JDK）
 .\scripts\bootstrap-jdk.ps1
 
 # 測試
@@ -188,6 +188,8 @@ Windows（Windows 10 x64、Temurin 21.0.12+8、Gradle 9.5.0）：
 - [排版規格](docs/spec/typography.md)
 - [主題與素材](docs/spec/themes.md)
 - [平台與 Runtime](docs/spec/platform-matrix.md)
+- [安全性政策](SECURITY.md)
+- [平台漏洞判定](docs/security/advisories.md)
 - [交接紀錄](handoff.md)
 
 ## 路線圖

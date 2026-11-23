@@ -1,6 +1,6 @@
 # Linux 回歸清單
 
-這份清單給 Ubuntu 開發機（`Ubuntu 26.04 / Wayland`）使用。基準 commit：`e168686`（2026-11-04）。
+這份清單給 Ubuntu 開發機（`Ubuntu 26.04 / Wayland`）使用。基準 commit：`e168686`（2026-11-04）；2026-11-23 起工具鏈改為 Temurin `21.0.13.1+2`、JBR `21.0.11+10-1163.125`。
 
 > Ubuntu 24.04 原生 X11 已於 2026-11-04 在 VMware VM 上完成（見 `handoff.md`）。
 > 該 VM 固定 `WaylandEnable=false`，所以 24.04 的 Wayland session 仍未驗證。
@@ -16,10 +16,25 @@ git log -1 --oneline          # 應為 e168686 或之後
 ## 1. 工具鏈
 
 ```bash
-./scripts/bootstrap-jdk.sh    # Temurin 21.0.12+8 → .local/jdk-21
+./scripts/bootstrap-jdk.sh    # Temurin 21.0.13.1+2 → .local/jdk-21
 ./scripts/bootstrap-jbr.sh    # 只有要跑原生 Wayland/X11 需要（JBR 21）
 ./scripts/gradlew-local.sh --version
 ```
+
+## 1.1 安全基線（2026-11-23 新增）
+
+```bash
+grep -E 'IMPLEMENTOR_VERSION|JAVA_VERSION' .local/jbr-21/release   # 應為 JBR-21.0.11+10-1163.125
+.local/jdk-21/bin/java -version                                   # Temurin 21.0.13.1+2
+ssh -V
+dpkg -l openssh-server openssh-client | tail -n +6
+apt list --upgradable 2>/dev/null | grep -i openssh || true
+```
+
+- 判定依據見 `docs/security/advisories.md`。CVE-2026-123158 只影響 musl + 無 PAM 的 sshd，
+  Ubuntu（glibc + PAM）不適用；`USN-8928-1` 請確認套件已達
+  24.04 `1:9.6p1-3ubuntu13.20`／26.04 `1:10.2p1-2ubuntu3.8` 或更新。
+- 只記錄狀態；是否執行 `apt-get upgrade` 動系統套件需另外確認。
 
 ## 2. 建置與測試
 
@@ -28,7 +43,7 @@ git log -1 --oneline          # 應為 e168686 或之後
 ./scripts/gradlew-local.sh check
 ```
 
-**預期：125 tests、29 suites、0 failures、0 errors、0 skipped**（2026-11-04 在 Windows 與 Ubuntu 24.04 X11 都是這個數字）。若有失敗，請把失敗的測試名稱貼回來。
+**預期：134 tests、31 suites、0 failures、0 errors、0 skipped**（Windows 21.0.13.1 已驗證；Linux 待本輪回歸確認）。若有失敗，請把失敗的測試名稱貼回來。
 
 ## 3. 效能基準
 

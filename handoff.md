@@ -4,6 +4,8 @@
 
 **M0 技術驗證完成（Go）；M1 進行中，已完成檔案層與主視窗殼的第一步。**
 
+2026-11-23：工具鏈升到 JDK 21 最新補丁（Temurin `21.0.13.1+2`、JBR `21.0.11+10-1163.125`），新增 `SECURITY.md` 與 `docs/security/advisories.md`（Log4Shell／OpenSSH／JDK CPU 判定）；Windows 回歸 134 tests 全綠、頁數不變、重新打包通過。Windows 顯示縮放（DPI）已加入 `graphicsConfiguration` 監聽與診斷 log，仍需實機切換縮放驗證。
+
 已完成規格文件、Gradle 骨架、編碼偵測、字寬表分頁、Java2D 書頁渲染、Swing 原型、10 MiB benchmark、JBR 21 原生 Wayland／XToolkit 啟動，以及文件讀寫與基本開檔／存檔。
 
 顯示設定、空白狀態、雙擊開檔、翻頁動畫與整頁下劃線已完成；編輯模式已接上 RSyntaxTextArea，可切換閱讀／編輯、偵測 dirty、存檔同步、尋找／取代、單頁書本外觀與 undo/redo 100 上限，並有關窗未儲存提示。章節列表支援可切換規則與目前章節標示；顯示設定、章節規則、書籤、最近開啟檔案與書庫會存到 XDG／AppData。檔案列表、書庫管理、老闆鍵（最小化）與單一實例已完成。尚未完成檔案關聯註冊；Windows GUI 互動與 Ubuntu 24.04 原生 X11 已於 2026-11-04 驗證。
@@ -14,6 +16,9 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 ## Completed
 
+- **工具鏈升級到 JDK 21 最新補丁（2026-11-23）**：Temurin `21.0.12+8` → `21.0.13.1+2`（含 2026-10 CPU、11-17 CSPU、eMudhra CA 修正）；JBR `1163.116` → `1163.125`。`bootstrap-jbr.sh` 原本只驗 `IMPLEMENTOR`，升級時會誤判「已安裝」，已改為比對 `IMPLEMENTOR_VERSION`。
+- **顯示縮放（DPI）主動重排（2026-11-23）**：`platform/DisplayScale` 以 `GraphicsConfiguration.defaultTransform` 判斷比例是否真的改變；`ReaderWindow.installDisplayScaleWatcher()` 監聽 `graphicsConfiguration`，變更時 `FlatLaf.updateUI()` → `enforceMinimumUiFontSize()` → `SwingUtilities.updateComponentTreeUI(frame)` → `ReaderPanel.onDisplayScaleChanged()` → `validate()`／`repaint()`。啟動與變更都印 `display scale:`（含 `ui scale=`、`ui font`）。`DisplayScaleTest` 3 個測試。
+- **安全文件（2026-11-23）**：`SECURITY.md`（支援版本、通報、修補 SLA、供應鏈）與 `docs/security/advisories.md`（Log4Shell 不適用證據、OpenSSH 判定、JDK/JBR 補丁缺口）。
 - `docs/spec/pagebypage-spec.md`：功能矩陣、畫面、快捷鍵、編碼、資料存放、與原作差異。
 - `docs/spec/typography.md`：頁面幾何、頁序、頁碼、狀態列、直排／橫排規則。
 - `docs/spec/themes.md`：仿真紙書／現代簡約、程序化材質、設定優先順序。
@@ -110,7 +115,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 ## In progress
 
-- **變更 Windows 顯示縮放（DPI）後，視窗不會立即重繪**：當下畫面可能還是舊比例，把視窗最大化／還原一次就恢復正常。需要確認是不是 Swing 沒收到 DPI 變更事件。
+- **變更 Windows 顯示縮放（DPI）後，視窗不會立即重繪**：已加入 `graphicsConfiguration` 監聽與 `display scale:` 診斷（2026-11-23），但**尚未實機驗證**縮放當下是否會收到事件。若 log 完全沒有 `display scale changed`，代表 JVM 沒收到 DPI 變更，只能改成「請重新啟動」提示。
 - 直排標點使用「置中」時已改為依墨跡邊界真正置中；字型缺直排形式、且選「右上」時仍用近似位移。
 - 尚未做 golden image 基準與字型子集。
 - 目前環境的 GNOME／Wayland 不支援 `SystemTray`，老闆鍵會退回最小化；托盤在有支援的桌面才會安裝。
@@ -367,6 +372,28 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 - 這台機器有 `Noto Sans TC`，`Typeface.resolveUiFamily()` 回傳它，所以 `ui font:` 不再落到 Segoe UI fallback（handoff 舊版把這條列為已知問題，已不成立）。
 - `build\prototype` 的頁數由 10／11 變成 11／12，是內嵌字型＋新排版規則的結果，與 Linux 一致。
 
+### 工具鏈升級與安全更新（2026-11-23，Windows）
+
+環境：Windows 10 IoT 企業版 LTSC 21H2 x64（`10.0.19044`）、Temurin `21.0.13.1+2`、Gradle `9.5.0`、`sun.awt.windows.WToolkit`。
+變更基準：JDK 21 最新補丁（見 `docs/security/advisories.md`）。
+
+| 指令 | Exit | 結果 | 證據 |
+|---|---|---|---|
+| 下載 `OpenJDK21U-jdk_x64_windows_hotspot_21.0.13.1_2.zip` | 0 | SHA-256 `bbebea14…4fbf2` 與 Adoptium 公佈值相符 | `.local\downloads\` |
+| `.\scripts\bootstrap-jdk.ps1` | 0 | `openjdk version "21.0.13.1"`、`Temurin-21.0.13.1+2` 安裝到 `.local\jdk-21` | 終端輸出 |
+| `.\scripts\gradlew-local.ps1 test --rerun-tasks` | 0 | **134 tests、31 suites、0 failures、0 errors、0 skipped**（新增 `DisplayScaleTest` 3 個） | `build\test-results\test\` |
+| `.\scripts\gradlew-local.ps1 check` | 0 | BUILD SUCCESSFUL | 終端輸出 |
+| `.\scripts\gradlew-local.ps1 run --args="--render build/prototype"` | 0 | 橫排 11 頁、直排 12 頁、3,761 字（與升級前相同） | `build\prototype\*.png` |
+| `.\scripts\gradlew-local.ps1 run --args="--benchmark"` | 0 | 10 MiB、解碼 112.6 ms、橫排 418.8 ms／7,724 頁、直排 560.7 ms／8,375 頁 | 終端輸出 |
+| `.\scripts\gradlew-local.ps1 run`（GUI） | 手動終止 | `java=21.0.13.1`、`toolkit=sun.awt.windows.WToolkit`、`page font: Noto Serif CJK TC (embedded=true)`、`display scale: ui scale=1.0`、`tray: installed` | 終端輸出 |
+| `.\scripts\package-windows.ps1` | 0 | app-image 71.5 MB、zip 56.1 MB；smoke test 解碼 94.5 ms、橫排 358.3 ms／7,724 頁、直排 542.1 ms／8,375 頁 | `build\package\` |
+
+尚未驗證：
+
+- Linux（Ubuntu 24.04.5 VM／26.04 Wayland）的本輪 runtime 升級與回歸。
+- Windows 顯示縮放 100%→150% 的即時重繪（需實機切換；log 應出現 `display scale changed`）。
+- Ubuntu VM 的 OpenSSH 套件升級（建議但未執行，需同意動系統套件）。
+
 ### 顯示預設值定案（2026-11-04）
 
 以全新的設定目錄模擬第一次啟動（`APPDATA` 指到空的暫存資料夾，不動使用者既有設定）：
@@ -575,7 +602,7 @@ JBR 下載與 checksum：
 
 ## Known issues
 
-- **Windows 變更顯示縮放後不會立即重繪**：在「設定 → 顯示器 → 縮放與版面配置」切換 125%／150% 時，視窗當下的畫面仍是舊比例（文字、書頁尺寸沒跟著變），把視窗最大化或還原一次就恢復。推測 Swing 沒有收到 DPI 變更通知、也就沒有觸發重排；尚未確認是 AWT 事件沒來，還是程式在自己的 resize 路徑上才重算。可先用「最大化一次」當 workaround。
+- **Windows 變更顯示縮放後不會立即重繪（已加修補，待實機驗證）**：2026-11-23 起 `ReaderWindow` 會監聽視窗的 `graphicsConfiguration`，比例真的改變時重建 FlatLaf 預設值、更新元件樹並重排書頁；啟動與變更都會印 `display scale:`。若這行沒出現、畫面仍要最大化／還原才正確，代表 JVM 沒收到 DPI 事件（JEP 263 記載 Windows 通常要重啟才會通知），下一步改成顯示「請重新啟動」提示。workaround 仍是最大化／還原一次。
 
 - UI 中文只在有 Noto Sans CJK／Noto Sans TC 的機器上變好。Windows 開發機有 `Noto Sans TC`，所以 `ui font:` 顯示 `Noto Sans TC 15pt`；沒有安裝的 Windows 機器 `resolveUiFamily()` 仍回傳 null，選單／工具列會走 Segoe UI 的 fallback。
 - 這台 JVM 的 Swing 已經是反鋸齒（`awt.useSystemAAFontSettings=on` 由程式設定），`lcd`／`gasp` 對 FlatLaf 版面量測不出可見差異；「字很舊」的感覺來自字級與 hinting，不是沒有反鋸齒。
