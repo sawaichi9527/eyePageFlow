@@ -22,6 +22,7 @@ import io.github.sawaichi9527.eyepageflow.core.SettingsStore
 import io.github.sawaichi9527.eyepageflow.core.TextDocument
 import io.github.sawaichi9527.eyepageflow.core.TextEncoding
 import io.github.sawaichi9527.eyepageflow.core.WritingMode
+import io.github.sawaichi9527.eyepageflow.platform.DisplayScale
 import io.github.sawaichi9527.eyepageflow.platform.TrayService
 import io.github.sawaichi9527.eyepageflow.render.BookRenderer
 import io.github.sawaichi9527.eyepageflow.render.EmptyStateRenderer
@@ -127,6 +128,7 @@ object ReaderWindow {
             frame.pack()
             frame.setLocationRelativeTo(null)
             frame.isVisible = true
+            installDisplayScaleWatcher(frame, reader)
             val tray = TrayService(frame, onExit = reader::requestClose)
             tray.install()
             reader.updateTitle()
@@ -168,6 +170,42 @@ object ReaderWindow {
                 synchronized(pendingPaths) { pendingPaths.add(path) }
             } else {
                 panel.openExternal(path)
+            }
+        }
+    }
+
+    /**
+     * 追蹤顯示縮放變更，並在比例真的改變時重建 UI 與版面。
+     *
+     * Windows 變更「縮放與版面配置」時，Swing 不會自動重算 FlatLaf 的字級與視窗配置；
+     * 使用者回報要最大化／還原一次才會正常。這裡監聽
+     * `Component` 的 `graphicsConfiguration` 變更，主動 `FlatLaf.updateUI()` 並重排，
+     * 避免依賴視窗狀態變化。診斷用的 `display scale:` 行可從啟動 log 判讀。
+     */
+    private fun installDisplayScaleWatcher(frame: JFrame, reader: ReaderPanel) {
+        fun currentScale(): Float = DisplayScale.of(frame.graphicsConfiguration)
+        var appliedScale = currentScale()
+        println("display scale: ui scale=$appliedScale")
+        frame.addPropertyChangeListener("graphicsConfiguration") {
+            val nextScale = currentScale()
+            if (!DisplayScale.changed(appliedScale, nextScale)) return@addPropertyChangeListener
+            println("display scale changed: ui scale=$appliedScale -> $nextScale")
+            appliedScale = nextScale
+            SwingUtilities.invokeLater {
+                try {
+                    FlatLaf.updateUI()
+                    enforceMinimumUiFontSize()
+                } catch (_: Exception) {
+                    // 縮放期間 LAF 重建失敗時保留現有外觀，至少讓畫面重繪。
+                }
+                SwingUtilities.updateComponentTreeUI(frame)
+                UIManager.getFont("defaultFont")?.let {
+                    println("display scale: ui font ${it.family} ${it.size}pt")
+                }
+                frame.invalidate()
+                frame.validate()
+                reader.onDisplayScaleChanged()
+                frame.repaint()
             }
         }
     }
@@ -434,6 +472,23 @@ private class ReaderPanel(
 
     fun requestCanvasFocus() {
         canvas.requestFocusInWindow()
+    }
+
+    /**
+     * 顯示縮放變更後重排目前頁面。
+     *
+     * 只重算視窗幾何（AUTO 單／雙頁）與重繪，不重新分頁：字級設定沒有變，
+     * 頁碼也不該因為縮放而跳動。
+     */
+    fun onDisplayScaleChanged() {
+        val nextDoublePage = settings.doublePageFor(canvas.width, canvas.height)
+        if (nextDoublePage != doublePage) {
+            doublePage = nextDoublePage
+            if (doublePage) spreadStart -= spreadStart % 2
+        }
+        revalidate()
+        canvas.revalidate()
+        canvas.repaint()
     }
 
     private fun currentAnchor(): Int = pagination.page(spreadStart).startOffset
