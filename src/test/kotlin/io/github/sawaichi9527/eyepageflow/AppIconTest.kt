@@ -69,6 +69,12 @@ class AppIconTest {
     }
 
     @Test
+    fun `window icon list covers the sizes AWT asks for`() {
+        val images = AppIcon.images()
+        assertEquals(listOf(512, 256, 128, 64, 48, 32, 16), images.map { it.getWidth(null) })
+    }
+
+    @Test
     fun `writeAs picks ico by extension and png otherwise`() {
         val dir = Path.of("build", "test-output", "icon")
         Files.createDirectories(dir)

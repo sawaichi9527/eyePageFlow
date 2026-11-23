@@ -44,6 +44,7 @@ fun main(args: Array<String>) {
                 openBookmarks = args.contains("--bookmarks"),
                 openLibrary = args.contains("--library"),
                 openFiles = args.contains("--files"),
+                openGuide = args.contains("--guide"),
             )
         }
     }
@@ -94,13 +95,19 @@ private fun printHelp() {    println(
           ./scripts/gradlew-local.sh run --args="--bookmarks"
           ./scripts/gradlew-local.sh run --args="--library"
           ./scripts/gradlew-local.sh run --args="--files"
+          ./scripts/gradlew-local.sh run --args="--guide"
           ./scripts/gradlew-local.sh run --args="--icon build/package/eyePageFlow.ico"
           ./scripts/gradlew-local.sh run --args="--render build/prototype"
           ./scripts/gradlew-local.sh run --args="--benchmark"
 
         Keys:
-          Left / PgUp / Backspace   previous spread
-          Right / PgDn / Space      next spread
+          Left / PgUp / Backspace / Up     previous spread
+          Right / PgDn / Space / Down      next spread
+          Home / End                       first / last page
+          Ctrl+Left / Ctrl+Right           reading history back / forward
+          Mouse click, wheel, scroll bar   move by page
+          F1                               user guide
+          F3                               find next
           V                         toggle vertical / horizontal
           D                         toggle single / double page
           T                         toggle theme

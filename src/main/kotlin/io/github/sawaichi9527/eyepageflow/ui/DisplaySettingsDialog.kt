@@ -25,17 +25,20 @@ import java.awt.Graphics2D
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
+import java.io.File
 import javax.swing.BorderFactory
 import javax.swing.JButton
 import javax.swing.JCheckBox
 import javax.swing.JColorChooser
 import javax.swing.JComboBox
 import javax.swing.JDialog
+import javax.swing.JFileChooser
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.JSpinner
 import javax.swing.SpinnerNumberModel
+import javax.swing.filechooser.FileNameExtensionFilter
 import kotlin.math.roundToInt
 
 class DisplaySettingsDialog(
@@ -78,6 +81,12 @@ class DisplaySettingsDialog(
     private var textColor = Color(initial.textColor)
     private var underlineColor = Color(initial.underlineColor)
     private var gutterColor = Color(initial.gutterColor)
+    private var desktopImage = initial.desktopImage
+    private var coverImage = initial.coverImage
+    private var pageImage = initial.pageImage
+    private val desktopImageLabel = JLabel(imageName(initial.desktopImage))
+    private val coverImageLabel = JLabel(imageName(initial.coverImage))
+    private val pageImageLabel = JLabel(imageName(initial.pageImage))
     private val desktopColorButton = colorButton(desktopColor) {
         desktopColor = it
         markColorSchemeCustom()
@@ -228,8 +237,11 @@ class DisplaySettingsDialog(
 
         section("材質")
         row("桌面圖案", desktopPatternCombo)
+        row("桌面圖片", imageControls(desktopImageLabel) { desktopImage = it })
         row("封面圖案", coverPatternCombo)
+        row("封面圖片", imageControls(coverImageLabel) { coverImage = it })
         row("頁面圖案", pagePatternCombo)
+        row("頁面圖片", imageControls(pageImageLabel) { pageImage = it })
 
         section("配色方案")
         row("方案", colorSchemeCombo)
@@ -306,6 +318,9 @@ class DisplaySettingsDialog(
         val gutterIndex = gutterPresets.indexOfFirst { it.color == draft.gutterColor }
         gutterPresetCombo.selectedIndex = if (gutterIndex >= 0) gutterIndex else gutterPresets.size
         pageWidthSpinner.value = draft.pageWidth
+        desktopImageLabel.text = imageName(draft.desktopImage)
+        coverImageLabel.text = imageName(draft.coverImage)
+        pageImageLabel.text = imageName(draft.pageImage)
         fontSizeSpinner.value = draft.fontSize.toInt()
         lineHeightSpinner.value = (draft.lineHeightFactor * 100).roundToInt()
         boldCheck.isSelected = draft.bold
@@ -450,6 +465,51 @@ class DisplaySettingsDialog(
         }
     }
 
+    private fun imageControls(label: JLabel, apply: (String) -> Unit): JPanel {
+        val buttons = JPanel(FlowLayout(FlowLayout.LEFT, 4, 0))
+        buttons.add(
+            JButton("選擇...").apply {
+                addActionListener { chooseImage(label, apply) }
+            },
+        )
+        buttons.add(
+            JButton("清除").apply {
+                addActionListener {
+                    apply("")
+                    label.text = imageName("")
+                    updateDraft()
+                }
+            },
+        )
+        val panel = JPanel(BorderLayout(6, 0))
+        panel.add(buttons, BorderLayout.WEST)
+        panel.add(label, BorderLayout.CENTER)
+        return panel
+    }
+
+    private fun chooseImage(label: JLabel, apply: (String) -> Unit) {
+        val chooser = JFileChooser()
+        chooser.dialogTitle = "選擇圖片"
+        chooser.fileFilter = FileNameExtensionFilter(
+            "圖片",
+            "png",
+            "jpg",
+            "jpeg",
+            "gif",
+            "bmp",
+            "webp",
+        )
+        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return
+        val path = chooser.selectedFile?.absolutePath ?: return
+        apply(path)
+        label.text = imageName(path)
+        markCustom()
+        updateDraft()
+    }
+
+    private fun imageName(path: String): String =
+        if (path.isBlank()) "（無）" else File(path).name
+
     private fun colorButton(initialColor: Color, onChoose: (Color) -> Unit): JButton =
         JButton().apply {
             preferredSize = Dimension(64, 22)
@@ -509,6 +569,9 @@ class DisplaySettingsDialog(
             desktopPatternId = desktopPatterns[desktopPatternCombo.selectedIndex].id,
             coverPatternId = coverPatterns[coverPatternCombo.selectedIndex].id,
             pagePatternId = pagePatterns[pagePatternCombo.selectedIndex].id,
+            desktopImage = desktopImage,
+            coverImage = coverImage,
+            pageImage = pageImage,
             desktopColor = desktopColor.rgb and 0xFFFFFF,
             coverColor = coverColor.rgb and 0xFFFFFF,
             pageColor = pageColor.rgb and 0xFFFFFF,

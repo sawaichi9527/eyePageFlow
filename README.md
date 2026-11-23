@@ -19,11 +19,11 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 - JBR 21 原生 Wayland 啟動驗證。
 - `jlink` + `jpackage app-image` 打包驗證。
 
-已完成：開檔／存檔、原編碼／BOM 保留、無法表示字元的 UTF-8／UTF-16LE fallback、命令列開檔、拖放開檔、空白狀態（logo＋雙擊開檔）、顯示設定（表單、字體家族、顏色、內置圖案、配色方案、中縫、即時預覽）、整頁下劃線、翻頁動畫、基本編輯模式（RSyntaxTextArea、dirty、閱讀／編輯切換、尋找／取代、單頁書本外觀、undo/redo 100）、章節列表（可切換規則、目前章節標示）、書籤管理、最近開啟檔案、書庫／檔案列表、老闆鍵（無托盤時最小化）、單一實例（第二次啟動把檔案送到既有視窗）、關窗提示、設定持久化（XDG／AppData）。
+已完成：開檔／存檔、原編碼／BOM 保留、無法表示字元的 UTF-8／UTF-16LE fallback、命令列開檔、拖放開檔、空白狀態（標記＋雙擊開檔）、顯示設定（表單、字體家族、顏色、內置圖案、自訂圖片、配色方案、中縫、即時預覽）、整頁下劃線、翻頁動畫、基本編輯模式（RSyntaxTextArea、dirty、閱讀／編輯切換、尋找／取代、單頁書本外觀、undo/redo 100）、章節列表（可切換規則、目前章節標示）、書籤管理、最近開啟檔案、書庫／檔案列表、老闆鍵（無托盤時最小化）、單一實例（第二次啟動把檔案送到既有視窗）、關窗提示、設定持久化（XDG／AppData）。
 
-本次 Session 已完成的 UI 行為變更（皆有實機證據，見上）：翻頁方向與半頁掃描、顯示預設值定案、自動恢復閱讀位置、編輯模式空白鍵。
+本次 Session 補上（皆有測試或啟動證據）：滑鼠左右半區翻頁、滾輪、右側頁面捲軸、Home／End 與 ↑／↓、Ctrl+←／Ctrl+→ 閱讀歷程、F3 尋找下一個、F1 使用說明、編輯選單與工具列的剪貼／復原／書籤／說明，以及 `Messages` 多語系架構（繁中預設、英文／日文可切換）。
 
-尚未完成：檔案關聯註冊、剪貼簿的 GUI 互動驗證、Ubuntu 24.04 的 Wayland session、`.desktop` 實際安裝。Windows 顯示縮放已可在執行中即時套用（125%／150% 實機驗證）。
+尚未完成：檔案關聯註冊、剪貼簿的 GUI 互動驗證、Ubuntu 24.04 的 Wayland session、`.desktop` 實際安裝、黑絨桌面圖案、對話框的英日翻譯。Windows 顯示縮放已可在執行中即時套用（125%／150% 實機驗證）。
 
 ## 平台
 
@@ -67,9 +67,10 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 # 直接開啟檔案
 ./scripts/gradlew-local.sh run --args="/path/to/novel.txt"
 
-# 直接進編輯模式／顯示設定
+# 直接進編輯模式／顯示設定／使用說明
 ./scripts/gradlew-local.sh run --args="--editor"
 ./scripts/gradlew-local.sh run --args="--settings"
+./scripts/gradlew-local.sh run --args="--guide"
 
 # 產生直排／橫排 PNG
 ./scripts/gradlew-local.sh run --args="--render build/prototype"
@@ -151,10 +152,10 @@ build/package/eyePageFlow-1.0.0-x86_64.AppImage
 
 Windows（Windows 10 IoT LTSC 21H2 x64、Temurin `21.0.13.1+2`、Gradle 9.5.0，2026-11-23）：
 
-- 測試：`.\scripts\gradlew-local.ps1 test --rerun-tasks` 通過（**134 tests、31 suites、0 failures、0 errors、0 skipped**）
-- Benchmark：10 MiB Big5、5,934,667 字、解碼 112.6 ms
-  - 橫排：7,724 頁、418.8 ms
-  - 直排：8,375 頁、560.7 ms
+- 測試：`.\scripts\gradlew-local.ps1 test --rerun-tasks` 通過（158 tests、36 suites、0 failures、0 errors、0 skipped）
+- Benchmark：10 MiB Big5、5,934,667 字、解碼 147.8 ms
+  - 橫排：7,724 頁、371.0 ms
+  - 直排：8,375 頁、592.7 ms
 - 渲染：橫排 11 頁、直排 12 頁、3,761 字
 - 啟動：`toolkit=sun.awt.windows.WToolkit`、`ui font: Noto Sans TC 15pt`、`page font: Noto Serif CJK TC (embedded=true)`、`tray: installed`
 - 顯示縮放：125%／150% 執行中切換立即正確（log 出現 `display scale changed`）
@@ -162,18 +163,20 @@ Windows（Windows 10 IoT LTSC 21H2 x64、Temurin `21.0.13.1+2`、Gradle 9.5.0，
 
 Ubuntu 24.04.5 LTS 原生 X11（VMware Workstation、2 vCPU、Temurin `21.0.13.1+2`、JBR `1163.125`，2026-11-23）：
 
-- 測試：`./scripts/gradlew-local.sh test --rerun-tasks` 通過（134 tests、31 suites、0 failures）
+- 測試：`./scripts/gradlew-local.sh test --rerun-tasks` 通過（134 tests、31 suites、0 failures；該次尚未含 i18n 等新測試）
 - Benchmark（同機升級前後對照）：解碼 123–159 ms、橫排 436–531 ms、直排 613–727 ms；頁數 7,724／8,375 與 Windows 相同
 - 渲染：橫排 11 頁、直排 12 頁
 - 啟動：`toolkit=sun.awt.X11.XToolkit`；`loginctl` 為 `Type=x11`，`Xorg` 是獨立行程（非 XWayland）
 - 開檔：`encoding=Big5 chars=3127 pages=7`
-- 打包：`./scripts/package-linux.sh` 通過（app-image、`.desktop`、tar.gz 65 MB），內附 runtime 含 `jdk.charsets`，Big5 正常
+- 打包：`./scripts/package-linux.sh` 通過（app-image、`.desktop`、tar.gz），內附 runtime 含 `jdk.charsets`，Big5 正常
 
-Ubuntu 26.04.1 LTS Wayland（2026-11-04，JBR `21.0.11`；**1.0.0 尚未在本輪重新回歸**）：
+Ubuntu 26.04.1 LTS Wayland（2026-11-04 晚間，commit `bed4ab5`，JBR `21.0.11`）：
 
-- Benchmark：10 MiB Big5、解碼 130.2 ms；橫排 7,779 頁／300.7 ms、直排 8,323 頁／447.4 ms
-- 原生 Wayland：`toolkit=sun.awt.wl.WLToolkit`；XWayland：`sun.awt.X11.XToolkit`
-- UI 文字：`Noto Sans CJK TC 15pt`；排版 `fontSize=26.0`、20 欄／頁
+- 測試：`./scripts/gradlew-local.sh test --rerun-tasks` 通過（131 tests、30 suites、0 failures）
+- Benchmark：10 MiB Big5、解碼 135 ms；橫排 7,724 頁／388–437 ms、直排 8,375 頁／657–715 ms
+- 原生 Wayland：`toolkit=sun.awt.wl.WLToolkit`；強制 X11：`toolkit=sun.awt.X11.XToolkit`
+- 渲染：橫排 11 頁、直排 12 頁；Big5 開檔、閱讀位置恢復、`package-linux.sh` 都通過
+- 注意：本輪（1.0.0 的 runtime 升級）尚未在 26.04 重新回歸
 
 排版參數已對齊原作 PageByPage 的實測值：頁 900×920、內容 812×856、字號 26、
 直排欄距 1.5 em、行距 1.44 em（原作頁 909×919、內容 825×872、字距 26 px、欄距／行距 39 px）。

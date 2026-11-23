@@ -86,11 +86,11 @@ class FindReplaceDialog(
         buttons.add(replaceAllButton)
         buttons.add(closeButton)
 
-        findButton.addActionListener { findNext() }
+        findButton.addActionListener { findNextMatch() }
         replaceButton.addActionListener { replaceOne() }
         replaceAllButton.addActionListener { replaceEverywhere() }
         closeButton.addActionListener { dispose() }
-        findField.addActionListener { findNext() }
+        findField.addActionListener { findNextMatch() }
         replaceField.addActionListener { replaceOne() }
         rootPane.defaultButton = findButton
 
@@ -111,7 +111,7 @@ class FindReplaceDialog(
         )
     }
 
-    private fun findNext() {
+    fun findNextMatch() {
         val found = editor.find(
             searchFor = findField.text,
             matchCase = matchCase.isSelected,

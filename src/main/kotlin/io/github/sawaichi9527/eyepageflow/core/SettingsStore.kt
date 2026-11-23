@@ -85,6 +85,12 @@ class SettingsStore(private val file: Path) {
                 KEY_PAGE_PATTERN,
                 defaultDisplay.pagePatternId,
             ),
+            desktopImage = properties.getProperty(
+                KEY_DESKTOP_IMAGE,
+                defaultDisplay.desktopImage,
+            ),
+            coverImage = properties.getProperty(KEY_COVER_IMAGE, defaultDisplay.coverImage),
+            pageImage = properties.getProperty(KEY_PAGE_IMAGE, defaultDisplay.pageImage),
             desktopColor = color(
                 properties.getProperty(KEY_DESKTOP_COLOR),
                 defaultDisplay.desktopColor,
@@ -137,6 +143,9 @@ class SettingsStore(private val file: Path) {
         properties[KEY_DESKTOP_PATTERN] = display.desktopPatternId
         properties[KEY_COVER_PATTERN] = display.coverPatternId
         properties[KEY_PAGE_PATTERN] = display.pagePatternId
+        properties[KEY_DESKTOP_IMAGE] = display.desktopImage
+        properties[KEY_COVER_IMAGE] = display.coverImage
+        properties[KEY_PAGE_IMAGE] = display.pageImage
         properties[KEY_DESKTOP_COLOR] = display.desktopColor.toString(16)
         properties[KEY_COVER_COLOR] = display.coverColor.toString(16)
         properties[KEY_PAGE_COLOR] = display.pageColor.toString(16)
@@ -183,6 +192,9 @@ class SettingsStore(private val file: Path) {
         const val KEY_DESKTOP_PATTERN = "display.desktopPattern"
         const val KEY_COVER_PATTERN = "display.coverPattern"
         const val KEY_PAGE_PATTERN = "display.pagePattern"
+        const val KEY_DESKTOP_IMAGE = "display.desktopImage"
+        const val KEY_COVER_IMAGE = "display.coverImage"
+        const val KEY_PAGE_IMAGE = "display.pageImage"
         const val KEY_DESKTOP_COLOR = "display.desktopColor"
         const val KEY_COVER_COLOR = "display.coverColor"
         const val KEY_PAGE_COLOR = "display.pageColor"

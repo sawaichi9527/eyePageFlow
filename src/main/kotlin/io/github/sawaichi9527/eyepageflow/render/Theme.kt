@@ -25,6 +25,9 @@ data class Theme(
     val gutterColor: Color,
     val shadowColor: Color,
     val pageNumberColor: Color,
+    val desktopImage: String = "",
+    val coverImage: String = "",
+    val pageImage: String = "",
 ) {
     companion object {
         val REALISTIC = Theme(
@@ -81,6 +84,9 @@ data class Theme(
                 underlineColor = Color(settings.underlineColor),
                 gutterColor = Color(settings.gutterColor),
                 pageNumberColor = Color(settings.textColor).darker(),
+                desktopImage = settings.desktopImage,
+                coverImage = settings.coverImage,
+                pageImage = settings.pageImage,
             )
         }
     }

@@ -103,4 +103,21 @@ class SettingsStoreTest {
         assertEquals(VerticalPunctuation.TOP_RIGHT, loaded.display.punctuationPlacement)
         assertEquals(false, loaded.display.justify)
     }
+
+    @Test
+    fun `custom image paths survive a reload`() {
+        val file = tempDir.resolve("images.properties")
+        val store = SettingsStore(file)
+        val display = DisplaySettings(
+            desktopImage = "/tmp/desktop.png",
+            coverImage = "/tmp/cover.jpg",
+            pageImage = "/tmp/page.png",
+        )
+        store.saveDisplaySettings(display)
+        val loaded = store.load()
+        assertEquals("/tmp/desktop.png", loaded.display.desktopImage)
+        assertEquals("/tmp/cover.jpg", loaded.display.coverImage)
+        assertEquals("/tmp/page.png", loaded.display.pageImage)
+        assertEquals("", DisplaySettings().desktopImage)
+    }
 }
