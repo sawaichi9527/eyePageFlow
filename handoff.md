@@ -4,7 +4,7 @@
 
 **M0 技術驗證完成（Go）；M1 進行中，已完成檔案層與主視窗殼的第一步。**
 
-2026-11-23：工具鏈升到 JDK 21 最新補丁（Temurin `21.0.13.1+2`、JBR `21.0.11+10-1163.125`），新增 `SECURITY.md` 與 `docs/security/advisories.md`（Log4Shell／OpenSSH／JDK CPU 判定）；Windows 回歸 134 tests 全綠、頁數不變、重新打包通過。Windows 顯示縮放（DPI）已加入 `graphicsConfiguration` 監聽與診斷 log，仍需實機切換縮放驗證。
+2026-11-23：工具鏈升到 JDK 21 最新補丁（Temurin `21.0.13.1+2`、JBR `21.0.11+10-1163.125`），新增 `SECURITY.md` 與 `docs/security/advisories.md`（Log4Shell／OpenSSH／JDK CPU 判定）；Windows 回歸 134 tests 全綠、頁數不變、重新打包通過，Ubuntu 24.04.5 VM 以同機前後對照完成（升級前後頁數相同、benchmark 都在 1 秒內、Big5 開檔正常）。Windows 顯示縮放（DPI）已加入 `graphicsConfiguration` 監聽與診斷 log，仍需實機切換縮放驗證；Ubuntu 26.04 Wayland 待補驗。
 
 已完成規格文件、Gradle 骨架、編碼偵測、字寬表分頁、Java2D 書頁渲染、Swing 原型、10 MiB benchmark、JBR 21 原生 Wayland／XToolkit 啟動，以及文件讀寫與基本開檔／存檔。
 
@@ -372,6 +372,35 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 - 這台機器有 `Noto Sans TC`，`Typeface.resolveUiFamily()` 回傳它，所以 `ui font:` 不再落到 Segoe UI fallback（handoff 舊版把這條列為已知問題，已不成立）。
 - `build\prototype` 的頁數由 10／11 變成 11／12，是內嵌字型＋新排版規則的結果，與 Linux 一致。
 
+### Ubuntu 24.04.5 LTS 的 runtime 升級回歸（2026-11-23，VMware VM）
+
+環境：Ubuntu `24.04.5 LTS`、kernel `7.0.0-43-generic`、2 vCPU／8 GB、VMware Workstation。
+驗證樹：`git archive` 快照（commit `63af283`）解到 `~/eyePageFlow-verify`，`.local` 指向 `~/eyePageFlow/.local`；
+同機前後對照：**升級前 Temurin 21.0.12+8／JBR 1163.116**，**升級後 Temurin 21.0.13.1+2／JBR 1163.125**。
+
+| 指令 | Exit | 結果 | 證據 |
+|---|---|---|---|
+| 升級前 `test --rerun-tasks` | 0 | 134 tests、31 suites、0 failures（新原始碼＋舊 runtime） | `build/test-results/test/` |
+| 升級前 `--benchmark` ×3 | 0 | 解碼 125.5–197.1 ms、橫排 429.9–572.9 ms、直排 554.2–692.5 ms；7,724／8,375 頁 | 終端輸出 |
+| `./scripts/bootstrap-jdk.sh` | 0 | `openjdk version "21.0.13.1"`、SHA-256 相符 | 終端輸出 |
+| `./scripts/bootstrap-jbr.sh` | 0 | `JBR-21.0.11+10-1163.125-nomod`（JRE＋SDK；SHA-256 已釘住） | 終端輸出 |
+| `gradlew-local.sh --version` | 0 | `Launcher JVM 21.0.13.1 (Eclipse Adoptium)` | 終端輸出 |
+| `test --rerun-tasks` | 0 | **134 tests、31 suites、0 failures、0 errors、0 skipped** | `build/test-results/test/` |
+| `check` | 0 | BUILD SUCCESSFUL | 終端輸出 |
+| `--render build/prototype` | 0 | 橫排 11 頁、直排 12 頁、3,761 字（與 Windows 相同） | `build/prototype/*.png` |
+| `--benchmark` ×5 | 0 | 解碼 123.0–158.8 ms、橫排 436.0–530.8 ms、直排 612.5–726.6 ms；7,724／8,375 頁 | 終端輸出 |
+| `package-linux.sh` | 0 | app-image、`.desktop`、`eyePageFlow-0.1.0-linux-x64.tar.gz`（65 MB） | `build/package/` |
+| app-image `--list-modules` | 0 | `java.desktop@21.0.11`、`jdk.charsets@21.0.11` | 終端輸出 |
+| app-image `bin/eyePageFlow --benchmark` | 0 | 解碼 135.8 ms、橫排 454.9 ms／7,724 頁、直排 660.1 ms／8,375 頁 | 終端輸出 |
+| app-image GUI（`DISPLAY=:0`、X11） | 124（timeout 終止） | `toolkit=sun.awt.X11.XToolkit`、`ui font: Noto Sans CJK TC 15pt`、`page font: ... (embedded=true)`、`display scale: ui scale=1.0`、`opened /tmp/epf-big5-24.txt encoding=Big5 chars=3127 pages=7`、`tray: installed` | `/tmp/epf-gui-new.log` |
+
+同機前後對照結論：頁數完全相同（7,724／8,375），橫排中位數 474 → 460 ms、直排 692 → 671 ms，
+都在 1 秒內，升級沒有造成分頁回歸。
+
+OpenSSH：VM 已是 `1:9.6p1-3ubuntu13.20`（USN-8928-1 的修復版本），`apt list --upgradable` 無 OpenSSH 項目。
+
+尚未驗證：Ubuntu 26.04 Wayland 的本輪回歸（由使用者在開發機執行，清單見 `docs/linux-regression.md`）。
+
 ### 工具鏈升級與安全更新（2026-11-23，Windows）
 
 環境：Windows 10 IoT 企業版 LTSC 21H2 x64（`10.0.19044`）、Temurin `21.0.13.1+2`、Gradle `9.5.0`、`sun.awt.windows.WToolkit`。
@@ -390,9 +419,9 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 
 尚未驗證：
 
-- Linux（Ubuntu 24.04.5 VM／26.04 Wayland）的本輪 runtime 升級與回歸。
+- Ubuntu 26.04 Wayland 的本輪 runtime 升級與回歸（見上一節的 24.04 結果）。
 - Windows 顯示縮放 100%→150% 的即時重繪（需實機切換；log 應出現 `display scale changed`）。
-- Ubuntu VM 的 OpenSSH 套件升級（建議但未執行，需同意動系統套件）。
+- Ubuntu 26.04 的 OpenSSH 套件版本（24.04 已確認在修復版本）。
 
 ### 顯示預設值定案（2026-11-04）
 

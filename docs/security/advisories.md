@@ -51,7 +51,14 @@
 **判定：僅開發／測試 VM 受影響，與發行物無關。**
 
 - 修復版本：24.04 `1:9.6p1-3ubuntu13.20`、26.04 `1:10.2p1-2ubuntu3.8`、22.04 `1:8.9p1-3ubuntu0.18`。
-- 處理：測試 VM 執行 `sudo apt-get update && sudo apt-get install --only-upgrade openssh-client openssh-server`，再以 `ssh -V`、`dpkg -l openssh-server` 取證。**尚未執行**（需使用者同意動 VM 系統套件）。
+- 處理：**2026-11-23 已檢查測試 VM（Ubuntu 24.04.5）**，`openssh-client`／`openssh-server` 都是
+  `1:9.6p1-3ubuntu13.20`，`apt list --upgradable` 沒有 OpenSSH 待更新項目，**無需動作**。
+  ```text
+  ii  openssh-client 1:9.6p1-3ubuntu13.20 amd64
+  ii  openssh-server 1:9.6p1-3ubuntu13.20 amd64
+  openssh: no upgrades pending
+  ```
+- Ubuntu 26.04 開發機待使用者下次回歸時用同一條指令確認。
 - 不影響 eyePageFlow 的功能與打包結果。
 
 ## 4. Windows OpenSSH client 9.5p2
