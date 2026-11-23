@@ -1,19 +1,20 @@
 # Linux 回歸清單
 
-這份清單給 Ubuntu 開發機（`Ubuntu 26.04 / Wayland`）使用。基準 commit：`bed4ab5`（2026-11-04）；2026-11-23 起工具鏈改為 Temurin `21.0.13.1+2`、JBR `21.0.11+10-1163.125`（該輪升級只在 24.04 VM 驗證，26.04 待補驗）。
+這份清單給 Ubuntu 開發機（`Ubuntu 26.04 / Wayland`）使用。基準 commit：`027912e`（2026-11-23 完成 1.0.0 回歸）；工具鏈為 Temurin `21.0.13.1+2`、JBR `21.0.11+10-1163.125`（26.04 已於 2026-11-23 驗證，見 `handoff.md` 的〈Ubuntu 26.04 Wayland 1.0.0 回歸〉）。
 
 > Ubuntu 24.04 原生 X11 已於 2026-11-04 在 VMware VM 上完成（見 `handoff.md`）。
 > 該 VM 固定 `WaylandEnable=false`，所以 24.04 的 Wayland session 仍未驗證。
-> Ubuntu 26.04 Wayland 已於 2026-11-04 晚間跑完這份清單（131 tests、benchmark、渲染、
-> `WLToolkit`／強制 `XToolkit`、Big5 開檔、閱讀位置恢復、`package-linux.sh` 全部通過），
-> 未做的項目見 `handoff.md` 的「Ubuntu 26.04 Wayland 回歸」段落。
+> Ubuntu 26.04 Wayland 已於 2026-11-23 以 `027912e` 跑完這份清單（158 tests、benchmark、
+> 渲染、`WLToolkit`、Big5 開檔、閱讀位置恢復、`--demo`、`package-linux.sh` 與 1.0.0 AppImage 全部通過），
+> 未做的項目（剪貼簿、IME、拖放、`.desktop` 安裝等）見 `handoff.md` 的〈Ubuntu 26.04 Wayland 1.0.0 回歸〉。
+> 2026-11-04 的舊結果（基準 `bed4ab5`、131 tests、Temurin 21.0.12+8／JBR 1163.116）保留在 `handoff.md` 的歷史章節。
 
 ## 0. 取得程式
 
 ```bash
 git clone https://github.com/sawaichi9527/eyePageFlow.git
 cd eyePageFlow
-git log -1 --oneline          # 應為 bed4ab5 或之後
+git log -1 --oneline          # 應為 027912e 或之後
 ```
 
 ## 1. 工具鏈
@@ -46,7 +47,7 @@ apt list --upgradable 2>/dev/null | grep -i openssh || true
 ./scripts/gradlew-local.sh check
 ```
 
-**預期：158 tests、36 suites、0 failures、0 errors、0 skipped**（2026-11-23 在 Windows 21.0.13.1 驗證；Linux 待本輪回歸確認）。若有失敗，請把失敗的測試名稱貼回來。
+**預期：158 tests、36 suites、0 failures、0 errors、0 skipped**（Windows 21.0.13.1 與 Ubuntu 26.04 Wayland 21.0.13.1 皆已驗證）。若有失敗，請把失敗的測試名稱貼回來。
 
 ## 3. 效能基準
 

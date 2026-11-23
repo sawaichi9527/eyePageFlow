@@ -4,7 +4,7 @@
 
 **1.0.0 正式版（2026-11-23）**：Windows 可攜式 zip 已產出並上傳 GitHub Release；M0 技術驗證完成（Go），M1 起的功能已可用。
 
-2026-11-23：工具鏈升到 JDK 21 最新補丁（Temurin `21.0.13.1+2`、JBR `21.0.11+10-1163.125`），新增 `SECURITY.md` 與 `docs/security/advisories.md`（Log4Shell／OpenSSH／JDK CPU 判定）；Windows 回歸 134 tests 全綠、頁數不變、重新打包通過，Ubuntu 24.04.5 VM 以同機前後對照完成（升級前後頁數相同、benchmark 都在 1 秒內、Big5 開檔正常）。**Windows 顯示縮放（DPI）已實機驗證 125%／150% 即時重繪正常**（daemon log 有 `display scale changed` 四筆）；Ubuntu 26.04 Wayland 待補驗。
+2026-11-23：工具鏈升到 JDK 21 最新補丁（Temurin `21.0.13.1+2`、JBR `21.0.11+10-1163.125`），新增 `SECURITY.md` 與 `docs/security/advisories.md`（Log4Shell／OpenSSH／JDK CPU 判定）；Windows 回歸 134 tests 全綠、頁數不變、重新打包通過，Ubuntu 24.04.5 VM 以同機前後對照完成（升級前後頁數相同、benchmark 都在 1 秒內、Big5 開檔正常）。**Windows 顯示縮放（DPI）已實機驗證 125%／150% 即時重繪正常**（daemon log 有 `display scale changed` 四筆）。Ubuntu 26.04 Wayland 已於同日晚間補驗（基準 `027912e`）：158 tests、頁數與 Windows 相同、原生 `WLToolkit`、Big5 開檔、閱讀位置、翻頁動畫與 1.0.0 打包（tar.gz／AppImage）全部通過。
 
 已完成規格文件、Gradle 骨架、編碼偵測、字寬表分頁、Java2D 書頁渲染、Swing 原型、10 MiB benchmark、JBR 21 原生 Wayland／XToolkit 啟動，以及文件讀寫與基本開檔／存檔。
 
@@ -119,10 +119,11 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 - `AppIcon.writeAs()`：依副檔名輸出 PNG（Linux `.desktop`／AppImage）或 ICO（Windows `jpackage --icon`）。ICO 是 7 個尺寸（16–256）的 PNG-in-ICO，`AppIconTest` 4 個測試驗證檔頭、entry 位移與 payload 簽章。
 - **修正打包後無法使用 Big5／GB18030**：`package-linux.sh` 與 `package-windows.ps1` 的 `jlink --add-modules` 少了 `jdk.charsets`，精簡 runtime 因此沒有 Big5，開舊編碼檔案會丟 `UnsupportedCharsetException: Big5`（GUI 外觀完全正常，只有開檔才炸）。已在 jlink 模組清單補上 `jdk.charsets`，並在打包腳本加上 smoke test。
 - Windows 打包的 smoke test 改用**打包進去的 `runtime\bin\java.exe`** 跑 `--benchmark`（實際解一次 Big5），不能用 `eyePageFlow.exe`：jpackage 的 Windows GUI launcher 會立刻回 0 並把 JVM 丟到背景，JVM 失敗時也不例外。
+- **Linux 1.0.0 發行物（2026-11-23）**：`package-linux.sh` 產出 `eyePageFlow-1.0.0-linux-x64.tar.gz`（67,995,466 bytes）與 `eyePageFlow-1.0.0-x86_64.AppImage`（67,238,392 bytes）；app-image runtime 含 `jdk.charsets@21.0.11`，`lib/app/eyePageFlow.cfg` 只有 `-Djpackage.app-version=1.0.0`。
 
 ## In progress
 
-- **Ubuntu 26.04 Wayland 本輪回歸**：runtime 升級與 DPI 修正只在 Windows 與 Ubuntu 24.04 X11 驗證，26.04 Wayland 待使用者補驗（清單見 `docs/linux-regression.md`）。
+- **Ubuntu 26.04 Wayland 的 GUI 互動尚未由真人操作驗證**：1.0.0 回歸（158 tests、`WLToolkit`、Big5、閱讀位置、動畫、打包）已於 2026-11-23 通過，剪貼簿、Wayland 下的 IME 與拖放仍未執行。
 - **OS 層的滑鼠／鍵盤輸入尚未驗證**：本機為 GNOME Wayland，`java.awt.Robot` 被 remote desktop portal 拒絕（`NotifyPointer`），`xdotool` 需要 sudo 密碼而未能安裝，XWayland 的 XTEST 也不會把游標送進 Wayland 主機上的視窗。已改用 in-process 派送 Swing 事件驗證 listener 接線（見驗證章節）；實際手感仍建議在 Windows 或 Ubuntu 24.04 X11 由真人確認。
 - i18n 只涵蓋主視窗、狀態列、關於與使用說明；顯示設定、尋找／取代等對話框仍固定繁中。
 - 自訂圖片固定 cover 置中裁切，沒有偏移或縮放比例選項。
@@ -152,7 +153,7 @@ Windows 開發環境已建立：`scripts/bootstrap-jdk.ps1`（Temurin 21.0.12+8 
 
 9. ~~Windows 可攜式 zip~~（已完成：`scripts/package-windows.ps1`，55.7 MB，解開即可執行；**不提供 MSI**，使用者已明確排除安裝檔）。檔案關聯註冊仍未做。
 10. ~~Linux AppImage~~（已產出；`appimagetool` 放在 `.local/tools/`，未納入版控）。
-11. ~~Ubuntu 26.04 Wayland 回歸~~（已完成 2026-11-04：131 tests、benchmark、渲染、WLToolkit／XToolkit、Big5 開檔、閱讀位置恢復與打包；清單見 `docs/linux-regression.md`）。Ubuntu 24.04 原生 X11 已於同日完成。
+11. ~~Ubuntu 26.04 Wayland 回歸~~（已完成 2026-11-04：131 tests、benchmark、渲染、WLToolkit／XToolkit、Big5 開檔、閱讀位置恢復與打包；清單見 `docs/linux-regression.md`。1.0.0 版本另於 2026-11-23 以 `027912e` 補跑，158 tests）。Ubuntu 24.04 原生 X11 已於同日完成。
 
 ### P3 體驗
 
@@ -409,7 +410,7 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 
 OpenSSH：VM 已是 `1:9.6p1-3ubuntu13.20`（USN-8928-1 的修復版本），`apt list --upgradable` 無 OpenSSH 項目。
 
-尚未驗證：Ubuntu 26.04 Wayland 的本輪回歸（由使用者在開發機執行，清單見 `docs/linux-regression.md`）。
+尚未驗證：Ubuntu 26.04 Wayland 的本輪回歸（已於 2026-11-23 以 `027912e` 補驗，見下方〈Ubuntu 26.04 Wayland 1.0.0 回歸〉）。
 
 ### 1.0.0 正式版打包（2026-11-23）
 
@@ -827,11 +828,44 @@ HEAD：`0fff55c`（`main` 與 `origin/main` 同步）；本次已發佈 `v1.0.0`
 
 尚未驗證（本次 Session 未執行）：
 
-- Ubuntu 26.04 Wayland 的本輪回歸（清單見 `docs/linux-regression.md`）。
-- Linux 1.0.0 發行物（tar.gz／AppImage）尚未以 1.0.0 版本重新打包。
+- ~~Ubuntu 26.04 Wayland 的本輪回歸~~（已完成 2026-11-23，見下方〈Ubuntu 26.04 Wayland 1.0.0 回歸〉；該節的「尚未驗證」清單仍有效）。
+- ~~Linux 1.0.0 發行物（tar.gz／AppImage）尚未以 1.0.0 版本重新打包~~（已於 2026-11-23 產出，見上方 Completed）。
 - 剪貼簿 GUI 互動、10 MiB 以上檔案與 20 MiB 上限、編輯器 10 MiB 輸入延遲。
 - 檔案關聯註冊、`.desktop` 實際安裝。
 - 未執行壓力測試、未觸及硬體。
+
+### Ubuntu 26.04 Wayland 1.0.0 回歸（2026-11-23，基準 `027912e`）
+
+環境：Ubuntu `26.04.1 LTS` x86_64、`XDG_SESSION_TYPE=wayland`、`WAYLAND_DISPLAY=wayland-0`、Temurin `21.0.13.1+2`（建置／測試）、JBR `21.0.11+10-1163.125`（GUI）、Gradle `9.5.0`。
+工具鏈在本次回歸前已用 `bootstrap-jdk.sh`／`bootstrap-jbr.sh` 升到釘住版本（`.local/jdk-21` 由 21.0.12+8 換成 21.0.13.1+2，`.local/jbr-21`／`.local/jbrsdk-21` 換成 1163.125）。
+
+| 指令 | Exit | Duration | 結果 | 證據 |
+|---|---|---|---|---|
+| `./scripts/gradlew-local.sh test --rerun-tasks` | 0 | 1m07s | **158 tests、36 suites、0 failures、0 errors、0 skipped**（與 Windows 基準相同） | `/tmp/opencode/reg-test.log`、`build/test-results/test/` |
+| `./scripts/gradlew-local.sh check` | 0 | 1s | BUILD SUCCESSFUL | `/tmp/opencode/reg-check.log` |
+| `run --args="--benchmark"` | 0 | — | 解碼 134.8 ms、橫排 381.2 ms／7,724 頁、直排 625.4 ms／8,375 頁 | `/tmp/opencode/reg-benchmark.log` |
+| `run --args="--render /tmp/opencode/reg-render"` | 0 | — | 橫排 11 頁、直排 12 頁、3,761 字；4 張 PNG 目視正常（頁 1 在右、拉丁旋倒、標點在字格內） | `/tmp/opencode/reg-render/*.png`、`reg-render.log` |
+| `installDist` + JBR 啟動 | 124（GUI 常駐終止） | — | `toolkit=sun.awt.wl.WLToolkit`、`ui font: Noto Sans CJK TC 15pt`、`page font: Noto Serif CJK TC (embedded=true)`、`opened ... encoding=Big5 chars=5111 pages=21`、`tray: not supported` | `/tmp/opencode/reg-wayland.log` |
+| 預寫 `reading-positions.properties`（offset 4000）後開檔 | 124（同上） | — | **`resumed reg-big5.txt at page 15/21 offset=4000`** | `/tmp/opencode/reg-resume.log` |
+| `--demo` 自動翻頁 | 124（同上） | — | `17/21` → `19` → `21` → 回翻 `19` → `17`，兩個方向動畫都走到 | `/tmp/opencode/reg-demo.log` |
+| `--settings`（全新 `XDG_CONFIG_HOME`） | 124（同上） | — | `theme=realistic layout=AUTO pageWidth=900 fontSize=26.0 underline=false underlineWidth=0.5 punctuation=CENTER` | `/tmp/opencode/reg-defaults.log` |
+| `./scripts/package-linux.sh` | 0 | — | app-image、`.desktop`（`desktop-file-validate` exit 0）、`eyePageFlow-1.0.0-linux-x64.tar.gz` 67,995,466 bytes | `/tmp/opencode/reg-package.log`、`build/package/` |
+| app-image `--list-modules` | 0 | — | `java.desktop@21.0.11`、`jdk.charsets@21.0.11` | 終端輸出 |
+| app-image `lib/app/eyePageFlow.cfg` | — | — | 只有 `-Djpackage.app-version=1.0.0`，沒有 `awt.toolkit.name` | 終端輸出 |
+| app-image `--benchmark` | 0 | — | Big5 解碼 162.6 ms、橫排 418.5 ms／7,724 頁、直排 615.2 ms／8,375 頁 | 終端輸出 |
+| app-image GUI | 124（同上） | — | `java=21.0.11 (JetBrains s.r.o.)`、`toolkit=sun.awt.wl.WLToolkit`、內嵌字型、Big5 21 頁 | `/tmp/opencode/reg-pkg-gui.log` |
+| tar.gz 解開後 GUI | 124（同上） | — | 同一組 log 行（`WLToolkit`、內嵌字型、Big5 21 頁） | `/tmp/opencode/reg-dist-gui.log` |
+| `APPIMAGE_EXTRACT_AND_RUN=1 ./scripts/package-appimage.sh` | 0 | — | `eyePageFlow-1.0.0-x86_64.AppImage` 67,238,392 bytes；`--benchmark` 7,724／8,375 正常 | `/tmp/opencode/reg-appimage2.log` |
+
+安全基線（清單 1.1）：`IMPLEMENTOR_VERSION="JBR-21.0.11+10-1163.125-nomod"`、Temurin `21.0.13.1+2`、
+`OpenSSH_10.2p1 Ubuntu-2ubuntu3.8`（符合 26.04 要求 `1:10.2p1-2ubuntu3.8`）、`apt list --upgradable` 無 OpenSSH 項目。
+
+第一次打包出的 1.0.0 AppImage 在 `--benchmark` 執行後被 appimagetool runtime 自我刪除，
+與 Known issues 記載的沙箱 FUSE fallback 現象相同（同日重打包後檔案保留）。
+
+尚未驗證（本輪未執行）：OS 層真人滑鼠／鍵盤操作、剪貼簿、Wayland 下的 IME 與拖放、
+10 MiB 以上檔案與 20 MiB 上限、編輯器 10 MiB 輸入延遲、`.desktop` 實際安裝與檔案關聯註冊、
+AppImage 在一般桌面直接執行（此沙箱限制）、Ubuntu 26.04 的 X11 session。
 
 ## M0 判定
 
