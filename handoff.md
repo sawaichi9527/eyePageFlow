@@ -869,6 +869,36 @@ HEAD：`0fff55c`（`main` 與 `origin/main` 同步）；本次已發佈 `v1.0.0`
 AppImage 在一般桌面直接執行（此沙箱限制）、Ubuntu 26.04 的 X11 session。
 （`.desktop` 安裝與檔案關聯已於同日列為不做，見 Known issues。）
 
+### Session close（2026-11-23，Ubuntu 26.04 Wayland）
+
+環境：Ubuntu `26.04.1 LTS` x86_64、Wayland session、Temurin `21.0.13.1+2`（建置／測試）、JBR `21.0.11+10-1163.125`（GUI）、Gradle `9.5.0`。
+本輪起點：`7fc6e9b`（落後 `origin/main` 10 個 commit）；收尾 HEAD：`281c12d`，`main` 與 `origin/main` 同步，工作樹乾淨。
+本輪工作：追平 1.0.0 遠端狀態、工具鏈升級到釘住版本、Ubuntu 26.04 Wayland 1.0.0 全套回歸，以及把「檔案關聯」「GNOME 托盤」兩項列為產品決策不做。
+
+| 指令 | Exit | Duration | 結果 | 證據 |
+|---|---|---|---|---|
+| `git fetch --all --prune`＋`git pull --ff-only` | 0 | — | `7fc6e9b..027912e`，取得 tag `v1.0.0` | 終端輸出 |
+| `scripts/bootstrap-jdk.sh`（先 `rm -rf .local/jdk-21`） | 0 | 下載 190 MB | Temurin `21.0.13.1+2`（SHA-256 驗證通過） | 終端輸出 |
+| `scripts/bootstrap-jbr.sh` | 0 | 下載 230 MB | JBR `1163.125`（JRE＋SDK） | 終端輸出 |
+| `./scripts/gradlew-local.sh --version` | 0 | — | `Launcher JVM 21.0.13.1 (Eclipse Adoptium)` | 終端輸出 |
+| `test --rerun-tasks` | 0 | 1m07s | 158 tests、36 suites、0 failures／errors／skipped | `/tmp/opencode/reg-test.log`、`build/test-results/test/` |
+| `check` | 0 | 1s | BUILD SUCCESSFUL | `/tmp/opencode/reg-check.log` |
+| `run --args="--benchmark"` | 0 | — | 解碼 134.8 ms、橫排 381.2 ms／7,724 頁、直排 625.4 ms／8,375 頁 | `/tmp/opencode/reg-benchmark.log` |
+| `run --args="--render …"` | 0 | — | 橫排 11 頁、直排 12 頁、3,761 字 | `/tmp/opencode/reg-render/` |
+| `installDist`＋原生 Wayland 啟動／`--demo`／閱讀位置恢復／`--settings` | 124（GUI 常駐） | — | 見上方〈Ubuntu 26.04 Wayland 1.0.0 回歸〉 | `/tmp/opencode/reg-wayland.log` 等 |
+| `package-linux.sh`、`package-appimage.sh` | 0 | — | 1.0.0 tar.gz 67,995,466 bytes、AppImage 67,238,392 bytes | `/tmp/opencode/reg-package.log`、`reg-appimage2.log` |
+| 文件一致性檢查（舊敘述 grep） | 1（無匹配） | — | 舊的「檔案關聯待辦」「.desktop 已產生但未安裝」敘述已無殘留 | 終端輸出 |
+| 表格結構檢查（新回歸章節） | 0 | — | 15 個資料列、欄位數一致；含 `\|` 的列已轉義 | 終端輸出 |
+| 打包產物大小比對 | 0 | — | 文件記載與 `build/package/` 實際 bytes 完全相同 | 終端輸出 |
+| `git rev-parse v1.0.0^{}` | 0 | — | `a36d2b1`，tag 未受本輪文件變更影響 | 終端輸出 |
+| `git grep -n -I "gho_\|20040401\|PRIVATE KEY\|password="` | 0 | — | 唯一命中是 handoff 內記錄舊檢查指令的那一列，不是憑證 | 終端輸出 |
+
+- 本輪兩個 commit 都是文件：`b819fd8`（26.04 回歸證據）、`281c12d`（檔案關聯與托盤的產品決策）。**兩個 commit 沒有程式碼變更，runtime test 記為 N/A**；上表測試屬回歸本身，在文件修改前執行，不能當成文件內容正確性的證據。
+- 文件正確性以結構與一致性檢查證明（舊敘述殘留、表格欄數、產物大小、tag 指向、憑證掃描）。
+- 本輪未執行：壓力測試、硬體操作、破壞性操作。
+
+尚未驗證（本輪）：OS 層真人滑鼠／鍵盤操作、剪貼簿、Wayland 下的 IME 與拖放、10 MiB 以上檔案與 20 MiB 上限、編輯器 10 MiB 輸入延遲、AppImage 在一般桌面直接執行、Ubuntu 26.04 的 X11 session、Ubuntu 24.04 的 Wayland session、Windows 本輪（1.0.0 已於 2026-11-23 在 Windows 驗證）。
+
 ## M0 判定
 
 **Go。** 分頁速度、直排／橫排渲染、JBR 原生 Wayland、app-image 啟動都已在目前環境驗證。Windows 端已補上建置、測試、渲染、benchmark、GUI 互動（IME／縮放／拖放／關窗提示）與可攜式 zip；禁則、左右對齊、offset↔page、surrogate pair 已完成，Ubuntu 26.04 Wayland 與 Ubuntu 24.04 原生 X11 回歸也都通過。Windows 顯示縮放即時重繪已於 2026-11-23 修好並實機驗證；最大風險改為 2 vCPU 環境下 benchmark 的 1 秒門檻偶爾被環境抖動超過。
