@@ -105,7 +105,7 @@ JAVA_HOME="$PWD/.local/jbr-21" build/install/eyePageFlow/bin/eyePageFlow
 ./scripts/package-linux.sh
 ```
 
-**預期**：app-image、`eyePageFlow.desktop`、`eyePageFlow-0.1.0-linux-x64.tar.gz` 都產生，
+**預期**：app-image、`eyePageFlow.desktop`、`eyePageFlow-1.0.0-linux-x64.tar.gz` 都產生，
 且腳本結尾的「驗證 app-image（Big5 解碼）」不會失敗
 （這一步是在抓 `jlink` 忘了 `jdk.charsets` 會讓打包版失去 Big5 的回歸）。
 

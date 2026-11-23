@@ -19,7 +19,7 @@ $jdkDir = Join-Path $rootDir '.local/jdk-21'
 $outDir = Join-Path $rootDir 'build/package'
 $runtimeDir = Join-Path $outDir 'runtime'
 $appName = 'eyePageFlow'
-$appVersion = '0.1.0'
+$appVersion = '1.0.0'
 $appDir = Join-Path $outDir $appName
 $zipPath = Join-Path $outDir "$appName-$appVersion-windows-x64.zip"
 

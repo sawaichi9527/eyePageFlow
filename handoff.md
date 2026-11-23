@@ -2,7 +2,7 @@
 
 ## Current status
 
-**M0 技術驗證完成（Go）；M1 進行中，已完成檔案層與主視窗殼的第一步。**
+**1.0.0 正式版（2026-11-23）**：Windows 可攜式 zip 已產出並上傳 GitHub Release；M0 技術驗證完成（Go），M1 起的功能已可用。
 
 2026-11-23：工具鏈升到 JDK 21 最新補丁（Temurin `21.0.13.1+2`、JBR `21.0.11+10-1163.125`），新增 `SECURITY.md` 與 `docs/security/advisories.md`（Log4Shell／OpenSSH／JDK CPU 判定）；Windows 回歸 134 tests 全綠、頁數不變、重新打包通過，Ubuntu 24.04.5 VM 以同機前後對照完成（升級前後頁數相同、benchmark 都在 1 秒內、Big5 開檔正常）。**Windows 顯示縮放（DPI）已實機驗證 125%／150% 即時重繪正常**（daemon log 有 `display scale changed` 四筆）；Ubuntu 26.04 Wayland 待補驗。
 
@@ -400,6 +400,21 @@ Big5 測試檔：`%TEMP%\opencode\eyePageFlow-big5-win.txt`（自製文字，146
 OpenSSH：VM 已是 `1:9.6p1-3ubuntu13.20`（USN-8928-1 的修復版本），`apt list --upgradable` 無 OpenSSH 項目。
 
 尚未驗證：Ubuntu 26.04 Wayland 的本輪回歸（由使用者在開發機執行，清單見 `docs/linux-regression.md`）。
+
+### 1.0.0 正式版打包（2026-11-23）
+
+`.\scripts\package-windows.ps1`（exit 0）：
+
+| 產物 | 大小 | SHA-256 |
+|---|---|---|
+| `build\package\eyePageFlow-1.0.0-windows-x64.zip` | 58,861,472 bytes（56.1 MiB） | `7b3707b8f49140f7bb5267c9d06264b83b54898352e6df1406d67a7545d3c6fa` |
+| `build\package\eyePageFlow\`（app-image） | 71.5 MB | — |
+
+- 版本：`build.gradle.kts`、`package-windows.ps1`、`package-linux.sh`、`package-appimage.sh` 全部改為 `1.0.0`。
+- 打包後的 runtime smoke test：解碼 102.1 ms、橫排 461.8 ms／7,724 頁、直排 615.8 ms／8,375 頁（Big5 正常）。
+- 解壓驗證：腳本自動 `Expand-Archive` 到 `build\package\verify` 並確認 `eyePageFlow.exe` 存在。
+- 1.0.0 前的回歸：`test --rerun-tasks` 134 tests、0 failures；`check` 成功；render 11／12 頁。
+- Linux 的 1.0.0 發行物（tar.gz／AppImage）尚未重新打包；目前 Linux 驗證的是 0.1.0 打包流程＋升級後 runtime。
 
 ### 顯示縮放（DPI）實機驗證（2026-11-23，Windows）
 

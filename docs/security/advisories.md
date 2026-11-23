@@ -3,7 +3,7 @@
 本檔記錄 eyePageFlow 對平台／工具鏈漏洞的判定與證據。政策見根目錄 `SECURITY.md`。
 
 - 最後更新：2026-11-23
-- 目前發行版：0.1.0
+- 目前發行版：1.0.0
 - 釘住的 runtime：Temurin `21.0.13.1+2`（Windows）、JBR `21.0.11+10-1163.125`（Linux）
 - 相依：Kotlin stdlib 2.4.10、FlatLaf 3.7.2、RSyntaxTextArea 3.6.3（JUnit 6.1.2 僅測試）
 

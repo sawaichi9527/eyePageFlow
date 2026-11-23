@@ -9,7 +9,7 @@ set -euo pipefail
 readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly OUT_DIR="${ROOT_DIR}/build/package"
 readonly APP_NAME="eyePageFlow"
-readonly APP_VERSION="0.1.0"
+readonly APP_VERSION="1.0.0"
 readonly APP_IMAGE="${OUT_DIR}/${APP_NAME}/bin/${APP_NAME}"
 readonly APPDIR="${OUT_DIR}/${APP_NAME}.AppDir"
 readonly TOOL="${ROOT_DIR}/.local/tools/appimagetool-x86_64.AppImage"

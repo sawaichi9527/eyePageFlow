@@ -15,7 +15,7 @@ readonly SDK_DIR="${ROOT_DIR}/.local/jbrsdk-21"
 readonly OUT_DIR="${ROOT_DIR}/build/package"
 readonly RUNTIME_DIR="${OUT_DIR}/runtime"
 readonly APP_NAME="eyePageFlow"
-readonly APP_VERSION="0.1.0"
+readonly APP_VERSION="1.0.0"
 
 if [[ ! -x "${SDK_DIR}/bin/jlink" ]] || [[ ! -x "${SDK_DIR}/bin/jpackage" ]]; then
     printf 'JBR SDK 不存在：%s\n先執行 ./scripts/bootstrap-jbr.sh\n' "${SDK_DIR}" >&2

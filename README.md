@@ -117,7 +117,7 @@ PageByPage 的功能復刻版本：純文字小說的閱讀器兼編輯器，支
 build\package\eyePageFlow\eyePageFlow.exe
 ```
 
-- 產出 `build\package\eyePageFlow-0.1.0-windows-x64.zip`（約 56 MB），解開後直接執行 `eyePageFlow\eyePageFlow.exe`。
+- 產出 `build\package\eyePageFlow-1.0.0-windows-x64.zip`（約 56 MB），解開後直接執行 `eyePageFlow\eyePageFlow.exe`。
 - 腳本會用 `jlink` 產生精簡 runtime，再用 `jpackage --type app-image` 打包，最後用打包進去的 `runtime\bin\java.exe` 跑一次 `--benchmark` 確認 Big5 能解碼。
 - 不做 MSI：`jpackage` 的 MSI 產生器需要額外的 WiX Toolset，本專案改以壓縮檔分送。
 
@@ -142,45 +142,41 @@ AppImage（需要 `appimagetool`，放在 `.local/tools/`）：
 
 ```bash
 ./scripts/package-appimage.sh
-build/package/eyePageFlow-0.1.0-x86_64.AppImage
+build/package/eyePageFlow-1.0.0-x86_64.AppImage
 ```
 
 原型快捷鍵：`V` 直排／橫排、`D` 單頁／雙頁、`T` 主題、`B` 低調模式、方向鍵／PgUp／PgDn 翻頁。
 
 ## 驗證數據
 
-Linux（Ubuntu 26.04.1 LTS x86_64、Wayland、JBR 21.0.11）：
+Windows（Windows 10 IoT LTSC 21H2 x64、Temurin `21.0.13.1+2`、Gradle 9.5.0，2026-11-23）：
 
-- Benchmark（2026-11-03，commit `0fcfbdd`）：10 MiB Big5、5,934,667 字、解碼 130.2 ms
-  - 橫排：7,779 頁、300.7 ms
-  - 直排：8,323 頁、447.4 ms
-- 原生 Wayland：`toolkit=sun.awt.wl.WLToolkit`
-- XWayland 路徑：`toolkit=sun.awt.X11.XToolkit`
-- 測試：`./scripts/gradlew-local.sh test` 通過（111 tests，0 failures）
-- UI 文字：`Noto Sans CJK TC 15pt`（JBR Wayland 原本只算出 13pt）
-- 排版：`startup typography: fontSize=26.0 font=Noto Serif CJK TC/26`、20 欄／頁
+- 測試：`.\scripts\gradlew-local.ps1 test --rerun-tasks` 通過（**134 tests、31 suites、0 failures、0 errors、0 skipped**）
+- Benchmark：10 MiB Big5、5,934,667 字、解碼 112.6 ms
+  - 橫排：7,724 頁、418.8 ms
+  - 直排：8,375 頁、560.7 ms
+- 渲染：橫排 11 頁、直排 12 頁、3,761 字
+- 啟動：`toolkit=sun.awt.windows.WToolkit`、`ui font: Noto Sans TC 15pt`、`page font: Noto Serif CJK TC (embedded=true)`、`tray: installed`
+- 顯示縮放：125%／150% 執行中切換立即正確（log 出現 `display scale changed`）
+- 可攜式打包：`build\package\eyePageFlow-1.0.0-windows-x64.zip`，解開後可執行、Big5 解碼正常
 
-Ubuntu 24.04.5 LTS 原生 X11（VMware Workstation、2 vCPU、Temurin 21.0.12+8、JBR 21.0.11、`X.Org 21.1.11`）：
+Ubuntu 24.04.5 LTS 原生 X11（VMware Workstation、2 vCPU、Temurin `21.0.13.1+2`、JBR `1163.125`，2026-11-23）：
 
-- 測試：`./scripts/gradlew-local.sh test --rerun-tasks` 通過（125 tests、29 suites、0 failures）
+- 測試：`./scripts/gradlew-local.sh test --rerun-tasks` 通過（134 tests、31 suites、0 failures）
+- Benchmark（同機升級前後對照）：解碼 123–159 ms、橫排 436–531 ms、直排 613–727 ms；頁數 7,724／8,375 與 Windows 相同
+- 渲染：橫排 11 頁、直排 12 頁
 - 啟動：`toolkit=sun.awt.X11.XToolkit`；`loginctl` 為 `Type=x11`，`Xorg` 是獨立行程（非 XWayland）
-- 開檔：`encoding=Big5 chars=134 pages=1`；渲染橫排 11 頁、直排 12 頁（與 Windows 相同）
-- 打包：`./scripts/package-linux.sh` 通過（app-image 94 MB、tar.gz、打包後 Big5 smoke test 通過）
-- 可攜式產物：tar.gz 解開可直接執行（JBR `21.0.11`、`toolkit=sun.awt.X11.XToolkit`）；AppImage 67 MB 可直接執行，執行後檔案保留
-- Benchmark：典型 390–725 ms；2 vCPU VM 偶有 982–1,686 ms 的環境抖動
+- 開檔：`encoding=Big5 chars=3127 pages=7`
+- 打包：`./scripts/package-linux.sh` 通過（app-image、`.desktop`、tar.gz 65 MB），內附 runtime 含 `jdk.charsets`，Big5 正常
 
-Windows（Windows 10 x64、Temurin 21.0.12+8、Gradle 9.5.0）：
+Ubuntu 26.04.1 LTS Wayland（2026-11-04，JBR `21.0.11`；**1.0.0 尚未在本輪重新回歸**）：
 
-- Benchmark（2026-11-04）：10 MiB Big5、5,934,667 字、解碼 119.9 ms
-  - 橫排：7,724 頁、369.3 ms
-  - 直排：8,375 頁、585.2 ms
-- 頁數與 Linux 完全一致：頁面字型已內嵌（`page font: Noto Serif CJK TC (embedded=true)`），不再依賴系統字型。
-- 啟動：`toolkit=sun.awt.windows.WToolkit`、`ui font: Noto Sans TC 15pt`、`tray: installed`
-- 開檔（單一實例轉送）：`encoding=Big5 chars=94 pages=1`
-- 測試：`.\scripts\gradlew-local.ps1 test` 通過（115 tests，0 failures）
-- 可攜式打包：`build\package\eyePageFlow-0.1.0-windows-x64.zip`（55.7 MB），解開後可執行、Big5 解碼正常。
-- 排版參數已對齊原作 PageByPage 的實測值：頁 900×920、內容 812×856、字號 26、
-  直排欄距 1.5 em、行距 1.44 em（原作頁 909×919、內容 825×872、字距 26 px、欄距／行距 39 px）。
+- Benchmark：10 MiB Big5、解碼 130.2 ms；橫排 7,779 頁／300.7 ms、直排 8,323 頁／447.4 ms
+- 原生 Wayland：`toolkit=sun.awt.wl.WLToolkit`；XWayland：`sun.awt.X11.XToolkit`
+- UI 文字：`Noto Sans CJK TC 15pt`；排版 `fontSize=26.0`、20 欄／頁
+
+排版參數已對齊原作 PageByPage 的實測值：頁 900×920、內容 812×856、字號 26、
+直排欄距 1.5 em、行距 1.44 em（原作頁 909×919、內容 825×872、字距 26 px、欄距／行距 39 px）。
 
 ## 疑難排解：log 在哪裡
 
@@ -226,6 +222,7 @@ Select-String -Path .local\gradle-home\daemon\9.5.0\daemon-*.out.log -Pattern "d
 - [排版規格](docs/spec/typography.md)
 - [主題與素材](docs/spec/themes.md)
 - [平台與 Runtime](docs/spec/platform-matrix.md)
+- [版本紀錄](CHANGELOG.md)
 - [安全性政策](SECURITY.md)
 - [平台漏洞判定](docs/security/advisories.md)
 - [交接紀錄](handoff.md)
