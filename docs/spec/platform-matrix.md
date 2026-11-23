@@ -16,19 +16,19 @@
 
 ### Linux：JBR 21
 
-- 版本：`JBR-21.0.11+10-1163.116`
-- Release tag：`jbr-release-21.0.11b1163.116`
+- 版本：`JBR-21.0.11+10-1163.125`
+- Release tag：`jbr-release-21.0.11b1163.125`
 - JRE 下載：
-  `https://cache-redirector.jetbrains.com/intellij-jbr/jbr-21.0.11-linux-x64-b1163.116.tar.gz`
-  SHA-256：`72bf2d1830587a3cd31b718d4af9fc7a88fc6c3740642d842b3b378d4acbe476`
+  `https://cache-redirector.jetbrains.com/intellij-jbr/jbr-21.0.11-linux-x64-b1163.125.tar.gz`
+  SHA-256：`5382a252006bb504d0862eafe3ab2c29e885123b559e98d8f1acfa92b632ff32`
 - SDK 下載（jlink／jpackage 用）：
-  `https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-21.0.11-linux-x64-b1163.116.tar.gz`
-  SHA-256：`097bf328b5bf5a236c095b8c8e5204c0eda91e5baa06b37383a7754b10671d8b`
+  `https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-21.0.11-linux-x64-b1163.125.tar.gz`
+  SHA-256：`255e47175863ed7be108da3eae3133e8f1a78eff47f938d447acec11a5556b14`
 - 授權：GPLv2+CE；打包時列入 `THIRD_PARTY_NOTICES.md` 並提供來源連結。
 
 ### Windows：Temurin 21
 
-- 版本：`21.0.12+8`（與 eyeShell 相同）
+- 版本：`21.0.13.1+2`（2026-10 OpenJDK CPU＋2026-11 CSPU，含 eMudhra CA 修正）
 - 由 Adoptium 提供；Windows 不需要 JBR 的 Wayland 補丁。
 
 ## 3. 啟動策略

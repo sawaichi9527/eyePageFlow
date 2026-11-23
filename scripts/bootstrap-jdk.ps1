@@ -1,6 +1,7 @@
 #!/usr/bin/env pwsh
 # Windows counterpart of scripts/bootstrap-jdk.sh.
 # Installs the pinned Temurin 21 JDK into .local/jdk-21 without touching the system JDK.
+# The pin tracks the latest Temurin 21 release (CPU/CSPU); see docs/security/advisories.md.
 [CmdletBinding()]
 param()
 
@@ -13,10 +14,10 @@ $jdkDir = Join-Path $localDir 'jdk-21'
 $downloadDir = Join-Path $localDir 'downloads'
 $tmpDir = Join-Path $localDir 'tmp'
 
-$jdkVersion = '21.0.12+8'
-$expectedSha256 = '9ba963ee2371874a74185d18bc7bb2ab9407df7683300855ed7606e0662321d0'
-$archiveName = 'OpenJDK21U-jdk_x64_windows_hotspot_21.0.12_8.zip'
-$downloadUrl = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12%2B8/$archiveName"
+$jdkVersion = '21.0.13.1+2'
+$expectedSha256 = 'bbebea1469996b276683c9299c227b294f85c847039c82633218186a4ad4fbf2'
+$archiveName = 'OpenJDK21U-jdk_x64_windows_hotspot_21.0.13.1_2.zip'
+$downloadUrl = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13.1%2B2/$archiveName"
 $archivePath = Join-Path $downloadDir $archiveName
 
 if (-not [Environment]::Is64BitOperatingSystem) {
@@ -37,7 +38,7 @@ function Test-PinnedJdk {
     if ($release -notcontains 'IMPLEMENTOR="Eclipse Adoptium"') {
         return $false
     }
-    if ($release -notcontains 'IMPLEMENTOR_VERSION="Temurin-21.0.12+8"') {
+    if ($release -notcontains 'IMPLEMENTOR_VERSION="Temurin-21.0.13.1+2"') {
         return $false
     }
 

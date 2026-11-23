@@ -6,17 +6,19 @@ readonly LOCAL_DIR="${ROOT_DIR}/.local"
 readonly DOWNLOAD_DIR="${LOCAL_DIR}/downloads"
 readonly TMP_DIR="${LOCAL_DIR}/tmp"
 
-readonly JBR_VERSION="21.0.11+10-1163.116"
-readonly JBR_CLASSIFIER="21.0.11-linux-x64-b1163.116"
+readonly JBR_VERSION="21.0.11+10-1163.125"
+readonly JBR_CLASSIFIER="21.0.11-linux-x64-b1163.125"
 
 readonly JRE_ARCHIVE="jbr-${JBR_CLASSIFIER}.tar.gz"
 readonly JRE_URL="https://cache-redirector.jetbrains.com/intellij-jbr/${JRE_ARCHIVE}"
-readonly JRE_SHA256="72bf2d1830587a3cd31b718d4af9fc7a88fc6c3740642d842b3b378d4acbe476"
+# JetBrains publishes SHA-512 only; this SHA-256 was computed after verifying the
+# vendor .checksum on 2026-11-23. See docs/security/advisories.md.
+readonly JRE_SHA256="5382a252006bb504d0862eafe3ab2c29e885123b559e98d8f1acfa92b632ff32"
 readonly JRE_DIR="${LOCAL_DIR}/jbr-21"
 
 readonly SDK_ARCHIVE="jbrsdk-${JBR_CLASSIFIER}.tar.gz"
 readonly SDK_URL="https://cache-redirector.jetbrains.com/intellij-jbr/${SDK_ARCHIVE}"
-readonly SDK_SHA256="097bf328b5bf5a236c095b8c8e5204c0eda91e5baa06b37383a7754b10671d8b"
+readonly SDK_SHA256="255e47175863ed7be108da3eae3133e8f1a78eff47f938d447acec11a5556b14"
 readonly SDK_DIR="${LOCAL_DIR}/jbrsdk-21"
 
 if [[ "$(uname -s)" != "Linux" || "$(uname -m)" != "x86_64" ]]; then
@@ -72,9 +74,15 @@ extract_fresh() {
     rm -rf "${staging}"
 }
 
+matches_pinned_release() {
+    local dir="$1"
+    [[ -f "${dir}/release" ]] || return 1
+    grep -Fxq 'IMPLEMENTOR="JetBrains s.r.o."' "${dir}/release" || return 1
+    grep -Fq "JBR-${JBR_VERSION}" "${dir}/release" || return 1
+}
+
 jre_ok=false
-if [[ -x "${JRE_DIR}/bin/java" ]] && [[ -f "${JRE_DIR}/release" ]] &&
-    grep -Fxq 'IMPLEMENTOR="JetBrains s.r.o."' "${JRE_DIR}/release"; then
+if [[ -x "${JRE_DIR}/bin/java" ]] && matches_pinned_release "${JRE_DIR}"; then
     jre_ok=true
 fi
 
@@ -88,7 +96,7 @@ fi
 
 sdk_ok=false
 if [[ -x "${SDK_DIR}/bin/jlink" ]] && [[ -x "${SDK_DIR}/bin/jpackage" ]] &&
-    [[ -d "${SDK_DIR}/jmods" ]]; then
+    [[ -d "${SDK_DIR}/jmods" ]] && matches_pinned_release "${SDK_DIR}"; then
     sdk_ok=true
 fi
 

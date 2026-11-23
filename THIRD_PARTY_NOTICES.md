@@ -7,13 +7,14 @@
 ### Eclipse Temurin 21
 
 - 使用平台：Windows x64
+- 版本：Temurin 21.0.13.1+2
 - 授權：GPLv2 with Classpath Exception
 - 來源：https://adoptium.net/
 
 ### JetBrains Runtime 21
 
 - 使用平台：Linux x64
-- 版本：JBR-21.0.11+10-1163.116
+- 版本：JBR-21.0.11+10-1163.125
 - 授權：GPLv2 with Classpath Exception
 - 來源：https://github.com/JetBrains/JetBrainsRuntime
 - 打包時需附上授權與源碼取得方式。
